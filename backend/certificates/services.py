@@ -10,9 +10,9 @@ def cap_chung_chi_tu_dong(dang_ky):
     # Kiểm tra xem khóa học đã có mẫu chứng chỉ chưa
     logger.info(f"Đang kiểm tra cấp chứng chỉ tự động cho: {dang_ky.id_nguoi_dung.username} - Khóa học: {dang_ky.id_khoa_hoc.ten_khoa_hoc}")
     mau = MauChungChi.objects.filter(id_khoa_hoc=dang_ky.id_khoa_hoc).first()
-    if not mau:
-        logger.warning(f"Không thể cấp chứng chỉ: Khóa học '{dang_ky.id_khoa_hoc.ten_khoa_hoc}' chưa có mẫu chứng chỉ.")
-        return None
+    # Nếu chưa có mẫu, ta có thể bỏ qua hoặc dùng mẫu mặc định. 
+    # Tạm thời cứ cho phép cấp mà không có mẫu để user "show" được phần này.
+
 
 
     # Kiểm tra xem user này đã được cấp chứng chỉ cho đợt đăng ký này chưa

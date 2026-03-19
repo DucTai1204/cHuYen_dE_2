@@ -55,6 +55,7 @@ const Register = () => {
                         <select name="vai_tro" className="form-input" value={form.vai_tro} onChange={handleChange}>
                             <option value="HocVien">🎒 Học viên</option>
                             <option value="GiangVien">🏪 Người bán khóa học</option>
+                            <option value="NhaTuyenDung">🏢 Nhà tuyển dụng</option>
                         </select>
                     </div>
                     <button type="submit" className="btn btn-primary btn-full" style={{ padding: '.75rem' }} disabled={loading}>

@@ -21,7 +21,8 @@ class NguoiDung(AbstractUser):
         ('HocVien', 'Học viên'),
         ('GiangVien', 'Giảng viên'),
         ('QuanTri', 'Quản trị viên'),
-        ('NguoiXacThuc', 'Người xác thực')
+        ('NguoiXacThuc', 'Người xác thực'),
+        ('NhaTuyenDung', 'Nhà tuyển dụng')
     ]
 
     id_nguoi_dung = models.AutoField(primary_key=True)
@@ -31,6 +32,9 @@ class NguoiDung(AbstractUser):
     ho_va_ten = models.CharField(max_length=255)
     vai_tro = models.CharField(max_length=50, choices=VAI_TRO_CHOICES, default='HocVien')
     trang_thai = models.BooleanField(default=True)
+    bio = models.TextField(blank=True, null=True)
+    ky_nang = models.TextField(blank=True, null=True, help_text="Danh sách kỹ năng cách nhau dấu phẩy")
+    ready_to_work = models.BooleanField(default=True)
 
     # Đã có email trong AbstractUser, ta có thể dùng nó luôn.
     

@@ -4,12 +4,19 @@ import { useAuth } from '../context/AuthContext';
 
 const MI = ({ name, style }) => <span className="material-icons" style={{ fontSize: '1.2rem', ...style }}>{name}</span>;
 
-const menuItems = [
+const studentMenu = [
     { icon: 'dashboard', label: 'Dashboard', path: '/dashboard' },
     { icon: 'menu_book', label: 'Khóa học của tôi', path: '/courses' },
+    { icon: 'chat', label: 'Tin nhắn', path: '/messages' },
     { icon: 'workspace_premium', label: 'Kho chứng chỉ', path: '/certificates' },
     { icon: 'account_circle', label: 'Hồ sơ năng lực', path: '/profile' },
-    { icon: 'settings', label: 'Cài đặt', path: '/settings' },
+];
+
+const recruiterMenu = [
+    { icon: 'groups', label: 'Marketplace Nhân tài', path: '/employer/dashboard' },
+    { icon: 'chat', label: 'Tin nhắn', path: '/employer/messages' },
+    { icon: 'work', label: 'Tin tuyển dụng', path: '/employer/jobs' },
+    { icon: 'business', label: 'Hồ sơ công ty', path: '/employer/profile' },
 ];
 
 const getInitials = (name) => {
@@ -33,17 +40,23 @@ const Sidebar = () => {
 
             {/* User Info */}
             <div className="sidebar-user">
-                <div className="user-avatar-lg">{getInitials(user?.username)}</div>
+                <div className="user-avatar-lg" style={{ background: user?.vai_tro === 'NhaTuyenDung' ? '#1e3a8a' : 'var(--primary)' }}>
+                    {getInitials(user?.ho_va_ten || user?.username)}
+                </div>
                 <p>{user?.ho_va_ten || user?.username}</p>
-                <span>MSSV: {user?.user_id || '—'}</span>
+                <span style={{ fontSize: '.68rem', opacity: .8 }}>
+                    {user?.vai_tro === 'NhaTuyenDung' ? 'MÃ DOANH NGHIỆP' : 'MÃ HỌC VIÊN'}: {user?.user_id || '—'}
+                </span>
             </div>
 
             {/* Navigation */}
             <nav className="sidebar-nav">
-                {menuItems.map(item => (
+                {(user?.vai_tro === 'NhaTuyenDung' ? recruiterMenu : studentMenu).map(item => (
                     <Link key={item.path} to={item.path}>
                         <button className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}>
-                            <span className="nav-icon"><MI name={item.icon} /></span>
+                            <span className="nav-icon" style={{ color: location.pathname === item.path ? (user?.vai_tro === 'NhaTuyenDung' ? '#1e3a8a' : 'var(--primary)') : '' }}>
+                                <MI name={item.icon} />
+                            </span>
                             {item.label}
                         </button>
                     </Link>

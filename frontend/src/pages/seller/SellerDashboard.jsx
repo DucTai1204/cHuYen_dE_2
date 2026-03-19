@@ -57,9 +57,18 @@ const CourseCard = ({ course, onPublish, onUnpublish }) => {
                 <div style={{ fontWeight: 700, fontSize: '.9rem', lineHeight: 1.4, marginBottom: '.5rem', color: 'var(--text-primary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {course.ten_khoa_hoc}
                 </div>
-                <div style={{ fontSize: '.75rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                <div style={{ fontSize: '.75rem', color: 'var(--text-muted)', marginBottom: '.75rem' }}>
                     {course.tong_chuong || 0} chương · {course.tong_bai || 0} bài · {course.tong_hoc_vien || 0} học viên
                 </div>
+
+                {Number(course.tong_so_danh_gia_ntd) > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', marginBottom: '1rem', background: '#ecfdf5', padding: '.5rem', borderRadius: '8px', border: '1px solid #10b981' }}>
+                        <MI name="verified" style={{ fontSize: '1.1rem', color: '#059669' }} />
+                        <div style={{ fontSize: '.75rem', color: '#065f46', fontWeight: 700 }}>
+                            Hài lòng doanh nghiệp: {Number(course.trung_binh_sao_ntd).toFixed(1)}/5
+                        </div>
+                    </div>
+                )}
 
                 {/* Price */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.75rem' }}>

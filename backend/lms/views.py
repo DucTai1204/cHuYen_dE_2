@@ -5,11 +5,17 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import KhoaHoc, BaiGiang, DangKyHoc, Chuong, TienDoBaiGiang
+from .models import (
+    KhoaHoc, BaiGiang, DangKyHoc, Chuong, 
+    TienDoBaiGiang, DanhGiaKhoaHoc, TinNhan, DanhGiaNhaTuyenDung,
+    TuyenDung
+)
 from .serializers import (
     KhoaHocSerializer, KhoaHocListSerializer,
     BaiGiangSerializer, DangKyHocSerializer, ChuongSerializer,
-    TienDoBaiGiangSerializer,
+    TienDoBaiGiangSerializer, DanhGiaKhoaHocSerializer, 
+    TinNhanSerializer, DanhGiaNhaTuyenDungSerializer,
+    TuyenDungSerializer
 )
 from core.permissions import IsGiangVien
 from certificates.services import cap_chung_chi_tu_dong
@@ -251,6 +257,65 @@ class DangKyHocViewSet(viewsets.ModelViewSet):
             return Response({'status': 'Thành công', 'phan_tram': dang_ky.phan_tram_hoan_thanh})
         return Response({'error': 'Thiếu phan_tram_hoan_thanh'}, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=False, methods=['get'], url_path='all-talent')
+    def all_talent(self, request):
+        """Lấy danh sách tất cả học viên đã hoàn thành (100% tiến độ) kèm bộ lọc nâng cao"""
+        user_role = getattr(request.user, 'vai_tro', '')
+        if user_role not in ['NhaTuyenDung', 'QuanTri', 'GiangVien']:
+             return Response({'detail': 'Bạn không có quyền xem danh sách nhân tài.'}, status=status.HTTP_403_FORBIDDEN)
+        
+        # Lấy các tham số lọc từ request
+        khoa_hoc_id = request.query_params.get('id_khoa_hoc')
+        skill_search = request.query_params.get('skill')
+        trinh_do = request.query_params.get('level')
+        ready = request.query_params.get('ready') # 'true' | 'false'
+        search_name = request.query_params.get('search')
+
+        from django.db.models import Q
+        queryset = DangKyHoc.objects.filter(
+            Q(trang_thai_hoc='DaXong') | Q(phan_tram_hoan_thanh__gte=100)
+        ).select_related('id_nguoi_dung', 'id_khoa_hoc')
+
+        # Áp dụng các bộ lọc nếu có
+        if khoa_hoc_id:
+            queryset = queryset.filter(id_khoa_hoc_id=khoa_hoc_id)
+        if trinh_do:
+            queryset = queryset.filter(id_khoa_hoc__trinh_do=trinh_do)
+        if ready:
+            is_ready = ready.lower() == 'true'
+            queryset = queryset.filter(id_nguoi_dung__ready_to_work=is_ready)
+        if skill_search:
+            queryset = queryset.filter(id_nguoi_dung__ky_nang__icontains=skill_search)
+        if search_name:
+            queryset = queryset.filter(
+                Q(id_nguoi_dung__ho_va_ten__icontains=search_name) | 
+                Q(id_nguoi_dung__username__icontains=search_name)
+            )
+
+        # Sắp xếp theo ngày đăng ký (có thể coi là ngày hoàn thành nếu cập nhật logic 100%)
+        queryset = queryset.order_by('-ngay_dang_ky')
+        
+        data = []
+        for dk in queryset:
+            u = dk.id_nguoi_dung
+            data.append({
+                'id_user': u.id_nguoi_dung,
+                'ho_va_ten': u.ho_va_ten or u.username,
+                'username': u.username,
+                'email': u.email,
+                'bio': getattr(u, 'bio', ''),
+                'ky_nang': getattr(u, 'ky_nang', ''),
+                'ready_to_work': getattr(u, 'ready_to_work', True),
+                'ten_khoa_hoc': dk.id_khoa_hoc.ten_khoa_hoc,
+                'trinh_do': dk.id_khoa_hoc.trinh_do,
+                'ngay_hoan_thanh': dk.ngay_dang_ky,
+                'id_khoa_hoc': dk.id_khoa_hoc.id_khoa_hoc,
+                'trung_binh_sao_ntd': dk.id_khoa_hoc.trung_binh_sao_ntd,
+                'tong_so_danh_gia_ntd': dk.id_khoa_hoc.tong_so_danh_gia_ntd,
+                'so_nguoi_co_viec_lam': dk.id_khoa_hoc.so_nguoi_co_viec_lam
+            })
+        return Response(data)
+
 
 class TienDoBaiGiangViewSet(viewsets.GenericViewSet):
     """
@@ -358,3 +423,109 @@ class TienDoBaiGiangViewSet(viewsets.GenericViewSet):
             'phan_tram_hoan_thanh': phan_tram,
             'message': 'Hoàn thành bài học!',
         })
+
+
+class DanhGiaKhoaHocViewSet(viewsets.ModelViewSet):
+    queryset = DanhGiaKhoaHoc.objects.all()
+    serializer_class = DanhGiaKhoaHocSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        khoa_hoc_id = self.request.query_params.get('khoa_hoc')
+        if khoa_hoc_id:
+            return self.queryset.filter(id_khoa_hoc=khoa_hoc_id).order_by('-ngay_tao')
+        return self.queryset.all().order_by('-ngay_tao')
+
+    def perform_create(self, serializer):
+        # Tự động gán người dùng hiện tại
+        serializer.save(id_nguoi_dung=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        # Kiểm tra xem user đã đánh giá khóa học này chưa
+        khoa_hoc_id = request.data.get('id_khoa_hoc')
+        if DanhGiaKhoaHoc.objects.filter(id_nguoi_dung=request.user, id_khoa_hoc=khoa_hoc_id).exists():
+            return Response(
+                {'detail': 'Bạn đã đánh giá khóa học này rồi.'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return super().create(request, *args, **kwargs)
+
+
+class TinNhanViewSet(viewsets.ModelViewSet):
+    queryset = TinNhan.objects.all()
+    serializer_class = TinNhanSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        from django.db.models import Q
+        return TinNhan.objects.filter(Q(id_nguoi_gui=user) | Q(id_nguoi_nhan=user)).order_by('-ngay_gui')
+
+    def perform_create(self, serializer):
+        serializer.save(id_nguoi_gui=self.request.user)
+
+
+class DanhGiaNhaTuyenDungViewSet(viewsets.ModelViewSet):
+    queryset = DanhGiaNhaTuyenDung.objects.all()
+    serializer_class = DanhGiaNhaTuyenDungSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        khoa_hoc_id = self.request.query_params.get('khoa_hoc')
+        if khoa_hoc_id:
+            return self.queryset.filter(id_khoa_hoc=khoa_hoc_id).order_by('-ngay_tao')
+        return self.queryset.all().order_by('-ngay_tao')
+
+    def perform_create(self, serializer):
+        # Chỉ cho phép Nhà tuyển dụng đánh giá
+        if getattr(self.request.user, 'vai_tro', '') != 'NhaTuyenDung':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Chỉ Nhà tuyển dụng mới có quyền thực hiện đánh giá này.")
+        
+        # KIỂM TRA: Đã tuyển dụng người từ khóa học này chưa?
+        khoa_hoc_id = self.request.data.get('id_khoa_hoc')
+        if not TuyenDung.objects.filter(id_nha_tuyen_dung=self.request.user, id_khoa_hoc=khoa_hoc_id).exists():
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("Bạn phải tuyển dụng ít nhất một học viên từ khóa học này mới có thể để lại đánh giá chuyên môn.")
+            
+        serializer.save(id_nha_tuyen_dung=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        khoa_hoc_id = request.data.get('id_khoa_hoc')
+        if DanhGiaNhaTuyenDung.objects.filter(id_nha_tuyen_dung=request.user, id_khoa_hoc=khoa_hoc_id).exists():
+            return Response(
+                {'detail': 'Bạn đã đánh giá khóa học này rồi.'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return super().create(request, *args, **kwargs)
+
+
+class TuyenDungViewSet(viewsets.ModelViewSet):
+    queryset = TuyenDung.objects.all()
+    serializer_class = TuyenDungSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        khoa_hoc_id = self.request.query_params.get('khoa_hoc')
+        trang_thai = self.request.query_params.get('trang_thai')
+        
+        # Lọc cơ bản theo vai trò
+        from django.db.models import Q
+        queryset = self.queryset.filter(Q(id_nha_tuyen_dung=user) | Q(id_hoc_vien=user))
+        
+        # Lọc mở rộng cho public (xem công ty nào tuyển từ khóa học này)
+        if khoa_hoc_id:
+            # Nếu truyền khoa_hoc, cho phép xem các bản ghi DaDongY của khóa đó (không quan tâm user nào)
+            return TuyenDung.objects.filter(id_khoa_hoc=khoa_hoc_id, trang_thai='DaDongY').order_by('-ngay_tuyen')
+            
+        if trang_thai:
+            queryset = queryset.filter(trang_thai=trang_thai)
+            
+        return queryset.order_by('-ngay_tuyen')
+
+    def perform_create(self, serializer):
+        if getattr(self.request.user, 'vai_tro', '') != 'NhaTuyenDung':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Chỉ Nhà tuyển dụng mới có quyền thực hiện hành động này.")
+        serializer.save(id_nha_tuyen_dung=self.request.user)

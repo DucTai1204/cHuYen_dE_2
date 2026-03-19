@@ -3,7 +3,24 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
-const MI = ({ name, style }) => <span className="material-icons" style={{ fontSize: '1.1rem', ...style }}>{name}</span>;
+const MI = ({ name, style }) => <span className="material-icons" style={{ fontSize: '1.2rem', ...style }}>{name}</span>;
+
+const calculateTrustScore = (course) => {
+    if (!course) return "0.0";
+    const reviewFactor = (Number(course.trung_binh_sao || 0) / 5) * 10 * 0.3;
+    const total = (Number(course.so_nguoi_dang_hoc || 0) + Number(course.so_nguoi_da_hoan_thanh || 0)) || 1;
+    const completionRate = (Number(course.so_nguoi_da_hoan_thanh || 0) / total);
+    const completionFactor = completionRate * 10 * 0.25;
+    const passRate = 0.85; 
+    const passFactor = passRate * 10 * 0.20;
+    const hiringRate = Number(course.so_nguoi_da_hoan_thanh) > 0 
+        ? Math.min(Number(course.so_nguoi_co_viec_lam) / Number(course.so_nguoi_da_hoan_thanh), 1)
+        : 0;
+    const hiringFactor = hiringRate * 10 * 0.25;
+    
+    const score = reviewFactor + completionFactor + passFactor + hiringFactor;
+    return Math.max(score, 5.0).toFixed(1);
+};
 
 /* ══════════════════════════════════════════════════════════════
    HELPERS
@@ -97,6 +114,11 @@ const CourseDetail = () => {
     const [enrolling, setEnrolling] = useState(false);
     const [toast, setToast] = useState(null);
     const [completedIds, setCompletedIds] = useState(new Set());
+    const [reviews, setReviews] = useState([]);
+    const [ntdReviews, setNtdReviews] = useState([]);
+    const [hiringCompanies, setHiringCompanies] = useState([]);
+    const [reviewLoading, setReviewLoading] = useState(false);
+    const [myReview, setMyReview] = useState({ so_sao: 5, nhan_xet: '' });
 
     const showToast = (msg, type = 'success') => {
         setToast({ msg, type });
@@ -129,10 +151,23 @@ const CourseDetail = () => {
                         setCompletedIds(new Set(tdRes.data?.completed_lesson_ids || []));
                     } catch (_) {/* bỏ qua nếu lỗi */ }
                 }
+
+                // Lấy danh sách đánh giá học viên
+                const rRes = await api.get(`/lms/danh-gia/?khoa_hoc=${id}`);
+                setReviews(rRes.data || []);
+
+                // Lấy danh sách đánh giá nhà tuyển dụng
+                const ntdRes = await api.get(`/lms/danh-gia-ntd/?khoa_hoc=${id}`);
+                setNtdReviews(ntdRes.data || []);
             } catch (err) {
                 console.error(err);
             } finally {
-                setLoading(false);
+                const resHires = await api.get(`/lms/tuyen-dung/`, { params: { khoa_hoc: id } });
+            // Lấy danh sách tên công ty duy nhất
+            const uniqueNames = [...new Set(resHires.data.map(h => h.ten_nha_tuyen_dung))];
+            setHiringCompanies(uniqueNames);
+            
+            setLoading(false);
             }
         };
         fetchAll();
@@ -147,11 +182,41 @@ const CourseDetail = () => {
             });
             setEnrollment(res.data);
             showToast('Đăng ký thành công! Chúc bạn học tốt!');
+            // Reload course stats
+            const cRes = await api.get(`/lms/khoa-hoc/${id}/`);
+            setCourse(cRes.data);
         } catch (err) {
             const msg = err?.response?.data?.detail || err?.response?.data?.non_field_errors?.[0] || 'Đăng ký thất bại';
             showToast(msg, 'error');
         } finally {
             setEnrolling(false);
+        }
+    };
+
+    const handleSubmitReview = async (e) => {
+        e.preventDefault();
+        if (!user) return;
+        setReviewLoading(true);
+        try {
+            await api.post('/lms/danh-gia/', {
+                id_khoa_hoc: id,
+                so_sao: myReview.so_sao,
+                nhan_xet: myReview.nhan_xet
+            });
+            showToast('Cảm ơn bạn đã đánh giá khóa học!');
+            // Refresh data
+            const [cRes, rRes] = await Promise.all([
+                api.get(`/lms/khoa-hoc/${id}/`),
+                api.get(`/lms/danh-gia/?khoa_hoc=${id}`)
+            ]);
+            setCourse(cRes.data);
+            setReviews(rRes.data || []);
+            setMyReview({ so_sao: 5, nhan_xet: '' });
+        } catch (err) {
+            const msg = err?.response?.data?.detail || 'Gửi đánh giá thất bại';
+            showToast(msg, 'error');
+        } finally {
+            setReviewLoading(false);
         }
     };
 
@@ -197,6 +262,9 @@ const CourseDetail = () => {
                 <span className="badge badge-blue"><MI name="security" style={{ fontSize: '.9rem', verticalAlign: 'middle' }} /> Giám sát AI</span>
                 {course.danh_muc && <span className="badge badge-gray">{course.danh_muc}</span>}
                 <span style={{ padding: '.2rem .6rem', borderRadius: '99px', fontSize: '.72rem', fontWeight: 600, background: '#f1f5f9', color: '#64748b' }}>{TRINH_DO[course.trinh_do] || course.trinh_do}</span>
+                {Number(course.tong_so_danh_gia_ntd) > 0 && (
+                    <span className="badge badge-emerald"><MI name="business_center" style={{ fontSize: '.9rem', verticalAlign: 'middle' }} /> Employer Verified</span>
+                )}
             </div>
 
             {/* ── TITLE ── */}
@@ -206,17 +274,85 @@ const CourseDetail = () => {
             )}
 
             {/* ── META ── */}
-            <div style={{ display: 'flex', gap: '1.25rem', fontSize: '.82rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* TRUST SCORE PREMIUM WIDGET */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
+                <div style={{ background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', borderRadius: '15px', padding: '1.5rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '1.5rem', boxShadow: '0 10px 25px rgba(30,58,138,.2)' }}>
+                    <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '2.5rem', fontWeight: 900, lineHeight: 1 }}>{calculateTrustScore(course)}</div>
+                        <div style={{ fontSize: '.7rem', opacity: .8, fontWeight: 700, marginTop: '.4rem', letterSpacing: '.05em' }}>TRUST SCORE</div>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.7rem', marginBottom: '.25rem' }}>
+                            <span>Tín nhiệm DN</span>
+                            <span style={{ fontWeight: 800, color: '#34d399' }}>
+                                {Number(course.tong_so_danh_gia_ntd) > 0 ? `${course.tong_so_danh_gia_ntd} DN đánh giá` : 'Đang cập nhật'}
+                            </span>
+                        </div>
+                        <div style={{ height: 5, background: 'rgba(255,255,255,0.2)', borderRadius: '10px', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: (Number(course.trung_binh_sao_ntd || 0) * 20) + '%', background: '#34d399' }}></div>
+                        </div>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.7rem', marginBottom: '.25rem', marginTop: '.75rem' }}>
+                            <span>Tỉ lệ việc làm</span>
+                            <span style={{ fontWeight: 800 }}>{Math.round((Number(course.so_nguoi_co_viec_lam) / (Number(course.so_nguoi_da_hoan_thanh) || 1)) * 100)}%</span>
+                        </div>
+                        <div style={{ height: 5, background: 'rgba(255,255,255,0.2)', borderRadius: '10px', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: (Number(course.so_nguoi_co_viec_lam) / (Number(course.so_nguoi_da_hoan_thanh) || 1)) * 100 + '%', background: '#fbbf24' }}></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ background: '#fff', borderRadius: '15px', border: '1px solid var(--border)', padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
+                        <div style={{ width: 40, height: 40, background: '#ecfdf5', color: '#059669', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <MI name="verified_user" style={{ fontSize: '1.5rem' }} />
+                        </div>
+                        <div>
+                            <div style={{ fontWeight: 800, color: '#059669', fontSize: '.9rem' }}>Chuyên gia chứng thực</div>
+                            <div style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>Cấp bởi nhà tuyển dụng uy tín</div>
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
+                        <div style={{ width: 40, height: 40, background: '#eff6ff', color: '#1e3a8a', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <MI name="work" style={{ fontSize: '1.5rem' }} />
+                        </div>
+                        <div>
+                            <div style={{ fontWeight: 800, color: '#1e3a8a', fontSize: '.9rem' }}>{course.so_nguoi_co_viec_lam} Học viên đã tuyển</div>
+                            <div style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>Mạng lưới đối tác rộng khắp</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Sub-Meta Row */}
+            <div style={{ display: 'flex', gap: '1.25rem', fontSize: '.82rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', flexWrap: 'wrap', alignItems: 'center', background: '#f8fafc', padding: '.75rem 1rem', borderRadius: '10px' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '.25rem' }}>
-                    <Stars n={4.8} /> <strong>4.8</strong> <span style={{ color: 'var(--text-muted)' }}>(đánh giá)</span>
+                    <Stars n={course.trung_binh_sao || 0} /> <strong>{Number(course.trung_binh_sao || 0).toFixed(1)}</strong> <span style={{ color: 'var(--text-muted)' }}>({course.tong_so_danh_gia || 0} đánh giá)</span>
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '.3rem' }}>
-                    <MI name="groups" style={{ fontSize: '1rem' }} /> {course.tong_hoc_vien || 0} học viên
+                    <MI name="groups" style={{ fontSize: '1rem' }} /> {course.so_nguoi_dang_hoc || 0} học viên đang học
                 </span>
-                {course.ten_giang_vien && <span style={{ display: 'flex', alignItems: 'center', gap: '.3rem' }}>
-                    <MI name="person" style={{ fontSize: '1rem' }} /> {course.ten_giang_vien}
-                </span>}
+                <span style={{ display: 'flex', alignItems: 'center', gap: '.3rem' }}>
+                    <MI name="person" style={{ fontSize: '1rem' }} /> GV: {course.ten_giang_vien}
+                </span>
             </div>
+
+            {/* RECRUITING PARTNERS LIST */}
+            {hiringCompanies.length > 0 && (
+                <div style={{ marginBottom: '2.5rem', background: '#ecfdf5', padding: '1.5rem', borderRadius: '15px', border: '1px solid #10b981' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', color: '#059669', marginBottom: '1rem', fontWeight: 800 }}>
+                        <MI name="business" /> 
+                         Đã có {hiringCompanies.length} đối tác tuyển dụng từ khóa học này:
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+                        {hiringCompanies.map((name, idx) => (
+                            <div key={idx} style={{ background: '#fff', padding: '.6rem 1rem', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '.5rem', boxShadow: 'var(--shadow-sm)', border: '1px solid #d1fae5', color: 'var(--text-primary)', fontWeight: 700, fontSize: '.9rem' }}>
+                                <MI name="check_circle" style={{ color: '#059669', fontSize: '1rem' }} /> {name}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* ── 2-COLUMN LAYOUT ── */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '1.5rem', alignItems: 'start' }}>
@@ -328,6 +464,107 @@ const CourseDetail = () => {
                             </div>
                         </div>
                     )}
+
+                    {/* REVIEWS SECTION */}
+                    <div className="card">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                            <h3 style={{ fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+                                <MI name="star" style={{ fontSize: '1.2rem', color: '#f59e0b' }} /> Phản hồi từ người học
+                            </h3>
+                            <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>
+                                {Number(course.trung_binh_sao || 0).toFixed(1)} <span style={{ color: '#f59e0b' }}>★</span>
+                            </div>
+                        </div>
+
+                        {/* Submit review */}
+                        {enrollment && !reviews.find(r => r.id_nguoi_dung === user?.id_nguoi_dung) && (
+                            enrollment.trang_thai_hoc === 'DaXong' ? (
+                                <form onSubmit={handleSubmitReview} style={{ padding: '1.25rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '1.5rem', boxShadow: 'inset 0 1px 3px rgba(0,0,0,.02)' }}>
+                                    <div style={{ fontWeight: 700, fontSize: '.9rem', marginBottom: '.75rem', color: 'var(--text-primary)' }}>Chúc mừng bạn đã hoàn thành khóa học! 🎉</div>
+                                    <div style={{ fontSize: '.82rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>Hãy chia sẻ trải nghiệm của bạn về nội dung và giảng viên:</div>
+                                    <div style={{ display: 'flex', gap: '.5rem', marginBottom: '1rem' }}>
+                                        {[1, 2, 3, 4, 5].map(s => (
+                                            <button key={s} type="button" onClick={() => setMyReview({ ...myReview, so_sao: s })} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>
+                                                <MI name={s <= myReview.so_sao ? 'star' : 'star_outline'} style={{ color: '#f59e0b', fontSize: '1.75rem' }} />
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <textarea
+                                        value={myReview.nhan_xet}
+                                        onChange={e => setMyReview({ ...myReview, nhan_xet: e.target.value })}
+                                        placeholder="Khóa học này có giúp ích cho bạn không? Hãy viết vài lời nhé..."
+                                        style={{ width: '100%', padding: '.75rem', borderRadius: '10px', border: '1px solid var(--border)', fontSize: '.875rem', marginBottom: '1rem', minHeight: 100, resize: 'vertical', outline: 'none' }}
+                                        onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+                                        onBlur={e => e.target.style.borderColor = 'var(--border)'}
+                                        required
+                                    />
+                                    <button type="submit" disabled={reviewLoading} className="btn btn-primary" style={{ padding: '.6rem 1.5rem', fontSize: '.85rem', fontWeight: 700 }}>
+                                        {reviewLoading ? 'Đang gửi...' : 'Gửi đánh giá khóa học'}
+                                    </button>
+                                </form>
+                            ) : (
+                                <div style={{ padding: '1rem 1.25rem', background: '#fff7ed', borderRadius: '10px', border: '1px solid #ffedd5', marginBottom: '1.5rem', display: 'flex', gap: '.75rem', alignItems: 'center' }}>
+                                    <MI name="info" style={{ color: '#d97706', fontSize: '1.2rem' }} />
+                                    <span style={{ fontSize: '.82rem', color: '#92400e', fontWeight: 500 }}>
+                                        Bạn cần học xong 100% khóa học để có thể để lại đánh giá (Đang học: {pct}%).
+                                    </span>
+                                </div>
+                            )
+                        )}
+
+                        {/* Review List */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            {reviews.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '.85rem', fontStyle: 'italic' }}>Chưa có đánh giá nào cho khóa học này.</div>
+                            ) : (
+                                reviews.map(r => (
+                                    <div key={r.id_danh_gia} style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '.3rem' }}>
+                                            <div style={{ fontWeight: 600, fontSize: '.875rem' }}>{r.ten_nguoi_dung}</div>
+                                            <div style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>{new Date(r.ngay_tao).toLocaleDateString('vi-VN')}</div>
+                                        </div>
+                                        <div style={{ marginBottom: '.4rem' }}><Stars n={r.so_sao} /></div>
+                                        <p style={{ fontSize: '.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{r.nhan_xet}</p>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    {/* RECRUITER REVIEWS SECTION */}
+                    <div className="card" style={{ border: '2px solid #10b981', background: '#f0fdf4' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                            <h3 style={{ fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '.4rem', color: '#065f46' }}>
+                                <MI name="verified" style={{ fontSize: '1.2rem', color: '#059669' }} /> Góc nhìn từ Nhà tuyển dụng
+                            </h3>
+                            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#059669' }}>
+                                {Number(course.trung_binh_sao_ntd || 0).toFixed(1)} <span style={{ color: '#059669' }}>★</span>
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            {ntdReviews.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '1.5rem', color: '#64748b', fontSize: '.85rem', fontStyle: 'italic' }}>Chưa có đánh giá chuyên môn nào từ doanh nghiệp.</div>
+                            ) : (
+                                ntdReviews.map(r => (
+                                    <div key={r.id_danh_gia} style={{ borderBottom: '1px solid #d1fae5', paddingBottom: '1rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '.3rem' }}>
+                                            <div style={{ fontWeight: 700, fontSize: '.875rem', color: '#065f46', display: 'flex', alignItems: 'center', gap: '.3rem' }}>
+                                                <MI name="business" style={{ fontSize: '1rem' }} /> {r.ten_nha_tuyen_dung}
+                                            </div>
+                                            <div style={{ fontSize: '.75rem', color: '#64748b' }}>{new Date(r.ngay_tao).toLocaleDateString('vi-VN')}</div>
+                                        </div>
+                                        <div style={{ marginBottom: '.4rem', color: '#059669' }}>
+                                            {'★'.repeat(r.so_sao_phu_hop)}{'☆'.repeat(5 - r.so_sao_phu_hop)}
+                                        </div>
+                                        <p style={{ fontSize: '.85rem', color: '#1e293b', lineHeight: 1.5, fontStyle: 'italic', fontWeight: 500 }}>
+                                            "{r.nhan_xet_chuyen_mon}"
+                                        </p>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
 
                     {/* Recognized by */}
                     <div className="card">

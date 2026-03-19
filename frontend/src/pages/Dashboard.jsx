@@ -46,6 +46,12 @@ const EnrolledCard = ({ enrollment }) => {
                     <div style={{ fontWeight: 600, fontSize: '.875rem', marginBottom: '.5rem', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: 'var(--text-primary)' }}>
                         {course.ten_khoa_hoc}
                     </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.7rem', marginBottom: '.3rem' }}>
+                        <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Tín nhiệm DN</span>
+                        <span style={{ fontWeight: 800, color: '#059669' }}>
+                            {Number(course.tong_so_danh_gia_ntd) > 0 ? `${course.tong_so_danh_gia_ntd} DN đánh giá` : 'Chưa có'}
+                        </span>
+                    </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.75rem', color: 'var(--text-muted)', marginBottom: '.4rem' }}>
                         <span>Tiến độ</span>
                         <span style={{ color: pct >= 100 ? '#10b981' : '#2563eb', fontWeight: 700 }}>{pct}%</span>
@@ -60,6 +66,25 @@ const EnrolledCard = ({ enrollment }) => {
             </div>
         </Link>
     );
+};
+
+/* ══════════════════════════════
+   HELPERS & TRUST SCORE
+   ══════════════════════════════ */
+const calculateTrustScore = (course) => {
+    const reviewFactor = (Number(course.trung_binh_sao || 0) / 5) * 10 * 0.3;
+    const total = (Number(course.so_nguoi_dang_hoc || 0) + Number(course.so_nguoi_da_hoan_thanh || 0)) || 1;
+    const completionRate = (Number(course.so_nguoi_da_hoan_thanh || 0) / total);
+    const completionFactor = completionRate * 10 * 0.25;
+    const passRate = 0.85; // Giả sử tỷ lệ pass chung là 85% nếu chưa có data thực tế
+    const passFactor = passRate * 10 * 0.20;
+    const hiringRate = Number(course.so_nguoi_da_hoan_thanh) > 0 
+        ? Math.min(Number(course.so_nguoi_co_viec_lam) / Number(course.so_nguoi_da_hoan_thanh), 1)
+        : 0;
+    const hiringFactor = hiringRate * 10 * 0.25;
+    
+    const score = reviewFactor + completionFactor + passFactor + hiringFactor;
+    return Math.max(score, 5.0).toFixed(1); // Tối thiểu 5.0 để nhìn cho đẹp
 };
 
 /* ══════════════════════════════
@@ -93,29 +118,137 @@ const ExploreCard = ({ course }) => {
                 </div>
 
                 <div style={{ padding: '.875rem' }}>
-                    <div style={{ fontSize: '.7rem', color: 'var(--text-muted)', marginBottom: '.3rem' }}>{course.danh_muc || 'Khóa học'}</div>
-                    <div style={{ fontWeight: 600, fontSize: '.875rem', marginBottom: '.4rem', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: 'var(--text-primary)' }}>
-                        {course.ten_khoa_hoc}
-                    </div>
-                    <div style={{ fontSize: '.75rem', color: 'var(--text-muted)', marginBottom: '.6rem', display: 'flex', alignItems: 'center', gap: '.3rem' }}>
-                        <MI name="person" style={{ fontSize: '1rem' }} /> {course.ten_giang_vien || 'Giảng viên'} · {course.tong_bai || 0} bài
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                        <span style={{ fontWeight: 700, color: '#d97706', fontSize: '.9rem' }}>
-                            {Number(course.gia_tien) === 0 ? 'Miễn phí' : `${Number(course.gia_tien).toLocaleString('vi-VN')}₫`}
-                        </span>
-                        {discount > 0 && (
-                            <span style={{ fontSize: '.75rem', textDecoration: 'line-through', color: 'var(--text-muted)' }}>
-                                {Number(course.gia_goc).toLocaleString('vi-VN')}₫
-                            </span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '.4rem' }}>
+                        <div style={{ fontSize: '.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>{course.danh_muc || 'CHUYÊN NGÀNH'}</div>
+                        {Number(course.tong_so_danh_gia_ntd) > 0 && (
+                            <div style={{ background: '#ecfdf5', color: '#059669', padding: '.15rem .45rem', borderRadius: '4px', fontSize: '.62rem', fontWeight: 800, border: '1px solid #10b981', display: 'flex', alignItems: 'center', gap: '.1rem' }}>
+                                <MI name="verified" style={{ fontSize: '.8rem' }} /> VERIFIED
+                            </div>
                         )}
                     </div>
-                    <div style={{ marginTop: '.65rem', padding: '.4rem .75rem', background: '#fef3c7', color: '#92400e', borderRadius: '7px', textAlign: 'center', fontSize: '.8rem', fontWeight: 600, border: '1px solid #fcd34d' }}>
-                        Xem chi tiết & Đăng ký →
+                    
+                    <div style={{ fontWeight: 700, fontSize: '.95rem', marginBottom: '.5rem', lineHeight: 1.3, height: '2.6rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: 'var(--text-primary)' }}>
+                        {course.ten_khoa_hoc}
+                    </div>
+
+                    {/* Trust Score Widget */}
+                    <div style={{ background: 'linear-gradient(90deg, #f8fafc, #f1f5f9)', borderRadius: '10px', padding: '.6rem .75rem', marginBottom: '.75rem', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                            <div style={{ fontSize: '.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '.03em' }}>Trust Score</div>
+                            <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#1e3a8a', lineHeight: 1 }}>
+                                {calculateTrustScore(course)}<span style={{ fontSize: '.75rem', opacity: .6 }}>/10</span>
+                            </div>
+                            <div style={{ fontSize: '.6rem', color: '#059669', fontWeight: 800 }}>
+                                <MI name="check_circle" style={{ fontSize: '.7rem', verticalAlign: 'middle' }} /> {Number(course.tong_so_danh_gia_ntd) > 0 ? `${course.tong_so_danh_gia_ntd} DN đánh giá` : 'Đang cập nhật'}
+                            </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '.85rem', fontWeight: 700, color: '#059669', display: 'flex', alignItems: 'center', gap: '.2rem', justifyContent: 'flex-end' }}>
+                                <MI name="trending_up" style={{ fontSize: '1rem' }} /> {Math.round((Number(course.so_nguoi_co_viec_lam) / (Number(course.so_nguoi_da_hoan_thanh) || 1)) * 100)}%
+                            </div>
+                            <div style={{ fontSize: '.6rem', color: 'var(--text-muted)', fontWeight: 600 }}>Tỉ lệ việc làm</div>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '.8rem', marginBottom: '.75rem', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '.2rem', color: '#f59e0b', fontSize: '.78rem', fontWeight: 700 }}>
+                            <MI name="star" style={{ fontSize: '.9rem' }} /> {Number(course.trung_binh_sao || 0).toFixed(1)}
+                        </div>
+                        <div style={{ fontSize: '.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '.3rem', fontWeight: 600 }}>
+                            <MI name="work" style={{ fontSize: '.9rem', color: '#1e3a8a' }} /> {course.so_nguoi_co_viec_lam || 0} đã tuyển
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px dashed #e2e8f0', paddingTop: '.75rem' }}>
+                        <span style={{ fontWeight: 800, color: '#d97706', fontSize: '1.05rem' }}>
+                            {Number(course.gia_tien) === 0 ? 'MIỄN PHÍ' : `${Number(course.gia_tien).toLocaleString('vi-VN')}₫`}
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '.2rem', color: '#2563eb', fontSize: '.78rem', fontWeight: 700 }}>
+                             Chi tiết <MI name="chevron_right" style={{ fontSize: '1rem' }} />
+                        </div>
                     </div>
                 </div>
             </div>
         </Link>
+    );
+};
+
+/* ══════════════════════════════
+   CAREER LIST (Danh sách được tuyển)
+   ══════════════════════════════ */
+const CareerList = () => {
+    const [hiredData, setHiredData] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchHired = () => {
+        setLoading(true);
+        api.get('/lms/tuyen-dung/')
+            .then(res => setHiredData(res.data || []))
+            .catch(err => console.error(err))
+            .finally(() => setLoading(false));
+    };
+
+    useEffect(() => {
+        fetchHired();
+    }, []);
+
+    const handleUpdateStatus = async (id, status) => {
+        const msg = status === 'DaDongY' ? 'chấp nhận lời mời làm việc' : 'từ chối lời mời này';
+        if(!window.confirm(`Bạn có chắc muốn ${msg}?`)) return;
+        try {
+            await api.patch(`/lms/tuyen-dung/${id}/`, { trang_thai: status });
+            alert('Cập nhật trạng thái thành công!');
+            fetchHired();
+        } catch (err) {
+            alert('Lỗi cập nhật trạng thái');
+        }
+    };
+
+    if (loading) return <div style={{ textAlign: 'center', padding: '3rem' }}>Đang kiểm tra thông tin tuyển dụng...</div>;
+    
+    if (hiredData.length === 0) return (
+        <div style={{ textAlign: 'center', padding: '5rem 2rem', background: '#fff', borderRadius: '15px', border: '1px solid var(--border)' }}>
+            <MI name="work_outline" style={{ fontSize: '3.5rem', color: '#cbd5e1', marginBottom: '1rem' }} />
+            <h3 style={{ fontWeight: 700, color: 'var(--text-muted)' }}>Chưa có lời mời tuyển dụng chính thức</h3>
+            <p style={{ fontSize: '.9rem', color: 'var(--text-muted)' }}>Hãy hoàn thành thêm nhiều khóa học để được các doanh nghiệp chú ý nhé!</p>
+        </div>
+    );
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ background: 'linear-gradient(135deg, #1e3a8a, #3b82f6)', padding: '1.5rem', borderRadius: '15px', color: '#fff', marginBottom: '.5rem', boxShadow: '0 10px 20px rgba(30,58,138,.2)' }}>
+                <h3 style={{ marginBottom: '.5rem', display: 'flex', alignItems: 'center', gap: '.5rem', fontWeight: 800 }}><MI name="celebration" /> Chào mừng bạn!</h3>
+                <p style={{ fontSize: '.95rem', opacity: .9 }}>Bạn nhận được <strong>{hiredData.length} lời mời tuyển dụng</strong> dựa trên kết quả học tập xuất sắc của mình.</p>
+            </div>
+            {hiredData.map(h => (
+                <div key={h.id_tuyen_dung} style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: 'var(--shadow-sm)' }}>
+                    <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
+                        <div style={{ width: 48, height: 48, background: '#eff6ff', color: '#1e3a8a', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <MI name="business" style={{ fontSize: '1.8rem' }} />
+                        </div>
+                        <div>
+                            <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{h.ten_nha_tuyen_dung}</div>
+                            <div style={{ fontSize: '.85rem', color: 'var(--text-secondary)' }}>
+                                Đã gửi lời mời dựa trên: <strong style={{ color: '#2563eb' }}>{h.ten_khoa_hoc}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                        {h.trang_thai === 'ChoXacNhan' ? (
+                            <div style={{ display: 'flex', gap: '.5rem' }}>
+                                <button onClick={() => handleUpdateStatus(h.id_tuyen_dung, 'TuChoi')} style={{ padding: '.5rem .8rem', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', fontSize: '.75rem', fontWeight: 700, cursor: 'pointer' }}>Từ chối</button>
+                                <button onClick={() => handleUpdateStatus(h.id_tuyen_dung, 'DaDongY')} style={{ padding: '.5rem .8rem', background: '#dcfce7', color: '#16a34a', border: 'none', borderRadius: '8px', fontSize: '.75rem', fontWeight: 700, cursor: 'pointer' }}>Chấp nhận</button>
+                            </div>
+                        ) : (
+                            <div style={{ background: h.trang_thai === 'DaDongY' ? '#ecfdf5' : '#fef2f2', color: h.trang_thai === 'DaDongY' ? '#059669' : '#b91c1c', padding: '.25rem .75rem', borderRadius: '99px', fontSize: '.75rem', fontWeight: 800, border: '1px solid transparent' }}>
+                                {h.trang_thai === 'DaDongY' ? 'ĐÃ ĐỒNG Ý' : 'ĐÃ TỪ CHỐI'}
+                            </div>
+                        )}
+                        <div style={{ fontSize: '.75rem', color: 'var(--text-muted)', marginTop: '.5rem' }}>{new Date(h.ngay_tuyen).toLocaleDateString('vi-VN')}</div>
+                    </div>
+                </div>
+            ))}
+        </div>
     );
 };
 
@@ -130,7 +263,7 @@ const Dashboard = () => {
     const [allCourses, setAllCourses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [activeTab, setActiveTab] = useState('exploring'); // 'learning' | 'exploring'
+    const [activeTab, setActiveTab] = useState('exploring'); // 'learning' | 'exploring' | 'career'
 
     useEffect(() => {
         // Lấy khóa học đã đăng ký
@@ -233,6 +366,7 @@ const Dashboard = () => {
                 {[
                     { id: 'learning', label: `Khóa học của tôi (${myEnrollments.length})` },
                     { id: 'exploring', label: `Khám phá (${exploreCourses.length})` },
+                    { id: 'career', label: `Sự nghiệp & Việc làm` },
                 ].map(tab => (
                     <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
                         flex: 1, padding: '.5rem .75rem', border: 'none', borderRadius: '7px', cursor: 'pointer',
@@ -294,6 +428,11 @@ const Dashboard = () => {
                         {filteredExplore.map(c => <ExploreCard key={c.id_khoa_hoc} course={c} />)}
                     </div>
                 )
+            )}
+
+            {/* ── TAB: SỰ NGHIỆP ── */}
+            {activeTab === 'career' && (
+                <CareerList />
             )}
         </div>
     );

@@ -1,5 +1,12 @@
 from rest_framework import serializers
-from .models import KhoaHoc, BaiGiang, KyNang, KyNangKhoaHoc, DangKyHoc, Chuong, TienDoBaiGiang
+from .models import (
+    KhoaHoc, Chuong, BaiGiang, DangKyHoc,
+    TienDoBaiGiang, DanhGiaKhoaHoc, TinNhan,
+    KyNang, KyNangKhoaHoc, DanhGiaNhaTuyenDung,
+    TuyenDung
+)
+from certificates.serializers import ChungChiSoSerializer
+
 
 
 class KyNangSerializer(serializers.ModelSerializer):
@@ -90,20 +97,30 @@ class KhoaHocSerializer(serializers.ModelSerializer):
     chuong_set = ChuongSerializer(many=True, read_only=True)
     bai_giang = BaiGiangSerializer(many=True, read_only=True)
     ky_nang = KyNangKhoaHocSerializer(source='kynangkhoahoc_set', many=True, read_only=True)
-    tong_hoc_vien = serializers.ReadOnlyField()
+    
+    # Giữ lại key cũ cho FE
+    tong_hoc_vien = serializers.IntegerField(source='so_nguoi_dang_hoc', read_only=True)
     tong_chuong = serializers.ReadOnlyField()
     tong_bai = serializers.ReadOnlyField()
     ten_giang_vien = serializers.CharField(source='id_giang_vien.username', read_only=True)
 
     class Meta:
         model = KhoaHoc
-        fields = '__all__'
+        fields = [
+            'id_khoa_hoc', 'id_giang_vien', 'ten_khoa_hoc', 'mo_ta_ngan',
+            'mo_ta_chi_tiet', 'gia_tien', 'gia_goc', 'hinh_anh_thumbnail',
+            'trung_binh_sao', 'tong_so_danh_gia', 'tong_hoc_vien',
+            'trung_binh_sao_ntd', 'tong_so_danh_gia_ntd', 'so_nguoi_co_viec_lam',
+            'chuong_set', 'bai_giang', 'ky_nang',
+            'tong_chuong', 'tong_bai', 'ten_giang_vien',
+            'ngay_tao', 'ngay_cap_nhat'
+        ]
         read_only_fields = ['id_giang_vien', 'ngay_tao', 'ngay_cap_nhat']
 
 
 class KhoaHocListSerializer(serializers.ModelSerializer):
     """Serializer gọn cho danh sách marketplace (không nested bài giảng chi tiết)"""
-    tong_hoc_vien = serializers.ReadOnlyField()
+    tong_hoc_vien = serializers.IntegerField(source='so_nguoi_dang_hoc', read_only=True)
     tong_chuong = serializers.ReadOnlyField()
     tong_bai = serializers.ReadOnlyField()
     ten_giang_vien = serializers.CharField(source='id_giang_vien.username', read_only=True)
@@ -113,13 +130,18 @@ class KhoaHocListSerializer(serializers.ModelSerializer):
         fields = [
             'id_khoa_hoc', 'ten_khoa_hoc', 'mo_ta_ngan', 'gia_tien', 'gia_goc',
             'hinh_anh_thumbnail', 'trinh_do', 'danh_muc', 'cong_khai',
-            'ngay_tao', 'ngay_cap_nhat', 'tong_hoc_vien', 'tong_chuong', 'tong_bai',
+            'ngay_tao', 'ngay_cap_nhat', 'tong_chuong', 'tong_bai',
             'ten_giang_vien', 'is_sequential',
+            'so_nguoi_dang_hoc', 'so_nguoi_da_hoan_thanh', 
+            'trung_binh_sao', 'tong_so_danh_gia', 'tong_hoc_vien',
+            'trung_binh_sao_ntd', 'tong_so_danh_gia_ntd', 'so_nguoi_co_viec_lam',
         ]
 
 
 class DangKyHocSerializer(serializers.ModelSerializer):
     khoa_hoc = KhoaHocListSerializer(source='id_khoa_hoc', read_only=True)
+    chung_chi = ChungChiSoSerializer(many=True, read_only=True)
+
 
     class Meta:
         model = DangKyHoc
@@ -132,3 +154,42 @@ class TienDoBaiGiangSerializer(serializers.ModelSerializer):
         model = TienDoBaiGiang
         fields = ['id', 'id_dang_ky', 'id_bai_giang', 'da_hoan_thanh', 'ngay_hoan_thanh']
         read_only_fields = ['id', 'ngay_hoan_thanh']
+
+
+class DanhGiaKhoaHocSerializer(serializers.ModelSerializer):
+    ten_nguoi_dung = serializers.CharField(source='id_nguoi_dung.username', read_only=True)
+
+    class Meta:
+        model = DanhGiaKhoaHoc
+        fields = ['id_danh_gia', 'id_khoa_hoc', 'id_nguoi_dung', 'ten_nguoi_dung', 'so_sao', 'nhan_xet', 'ngay_tao']
+        read_only_fields = ['id_nguoi_dung', 'ngay_tao']
+
+
+class TinNhanSerializer(serializers.ModelSerializer):
+    ten_nguoi_gui = serializers.CharField(source='id_nguoi_gui.username', read_only=True)
+    ten_nguoi_nhan = serializers.CharField(source='id_nguoi_nhan.username', read_only=True)
+
+    class Meta:
+        model = TinNhan
+        fields = ['id_tin_nhan', 'id_nguoi_gui', 'ten_nguoi_gui', 'id_nguoi_nhan', 'ten_nguoi_nhan', 'noi_dung', 'ngay_gui']
+        read_only_fields = ['id_nguoi_gui', 'ngay_gui']
+
+
+class DanhGiaNhaTuyenDungSerializer(serializers.ModelSerializer):
+    ten_nha_tuyen_dung = serializers.CharField(source='id_nha_tuyen_dung.username', read_only=True)
+
+    class Meta:
+        model = DanhGiaNhaTuyenDung
+        fields = ['id_danh_gia', 'id_khoa_hoc', 'id_nha_tuyen_dung', 'ten_nha_tuyen_dung', 'so_sao_phu_hop', 'nhan_xet_chuyen_mon', 'ngay_tao']
+        read_only_fields = ['id_nha_tuyen_dung', 'ngay_tao']
+
+
+class TuyenDungSerializer(serializers.ModelSerializer):
+    ten_hoc_vien = serializers.CharField(source='id_hoc_vien.username', read_only=True)
+    ten_nha_tuyen_dung = serializers.CharField(source='id_nha_tuyen_dung.username', read_only=True)
+    ten_khoa_hoc = serializers.CharField(source='id_khoa_hoc.ten_khoa_hoc', read_only=True)
+
+    class Meta:
+        model = TuyenDung
+        fields = ['id_tuyen_dung', 'id_nha_tuyen_dung', 'ten_nha_tuyen_dung', 'id_hoc_vien', 'ten_hoc_vien', 'id_khoa_hoc', 'ten_khoa_hoc', 'ngay_tuyen', 'ghi_chu', 'trang_thai']
+        read_only_fields = ['id_nha_tuyen_dung', 'ngay_tuyen']

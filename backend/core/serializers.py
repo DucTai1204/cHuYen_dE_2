@@ -17,3 +17,14 @@ class RegisterSerializer(serializers.ModelSerializer):
             vai_tro=validated_data.get('vai_tro', 'HocVien')
         )
         return user
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NguoiDung
+        fields = [
+            'id_nguoi_dung', 'username', 'email', 'ho_va_ten', 
+            'vai_tro', 'bio', 'ky_nang', 'ready_to_work', 'id_to_chuc'
+        ]
+        read_only_fields = ['id_nguoi_dung', 'username', 'vai_tro']
+

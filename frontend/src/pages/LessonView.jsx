@@ -378,13 +378,20 @@ const LessonView = () => {
                 id_khoa_hoc: courseId,
             });
             setCompletedIds(prev => new Set([...prev, currentLesson.id_bai_giang]));
-            showToast(`🎉 Hoàn thành "${currentLesson.ten_bai_giang}"! Tiến độ: ${res.data.phan_tram_hoan_thanh}%`);
+            // Cập nhật lại enrollment để lấy % mới và certificate mới
+            const eRes = await api.get('/lms/dang-ky-hoc/');
+            const updatedEnroll = (eRes.data || []).find(e => {
+                const eid = e.khoa_hoc?.id_khoa_hoc ?? e.id_khoa_hoc;
+                return String(eid) === String(courseId);
+            });
+            setEnrollment(updatedEnroll || null);
 
             // Kiểm tra xem đã hoàn thành toàn bộ chưa
             const idx = flatLessons.findIndex(l => l.id_bai_giang === currentLesson.id_bai_giang);
-            if (idx === flatLessons.length - 1) {
+            if (idx === flatLessons.length - 1 || updatedEnroll?.phan_tram_hoan_thanh >= 100) {
                 showToast('🏆 Bạn đã hoàn thành toàn bộ khóa học!');
             }
+
         } catch (err) {
             const msg = err?.response?.data?.error || 'Không thể đánh dấu hoàn thành';
             showToast(msg, 'error');
@@ -463,7 +470,31 @@ const LessonView = () => {
                     <div style={{ width: 80, height: 5, background: 'rgba(255,255,255,.2)', borderRadius: '99px', overflow: 'hidden' }}>
                         <div style={{ height: '100%', width: `${pct}%`, background: '#34d399', borderRadius: '99px', transition: 'width .5s' }} />
                     </div>
+                    {pct >= 100 && (
+                        <button
+                            onClick={() => {
+                                const cert = enrollment?.chung_chi?.[0];
+                                if (cert) {
+                                    navigate(`/verify/${cert.ma_uuid_chung_chi}`);
+                                } else {
+
+                                    showToast('Chứng chỉ đang được khởi tạo, vui lòng đợi giây lát...', 'info');
+                                }
+                            }}
+                            style={{
+                                background: 'linear-gradient(135deg, #10b981, #059669)',
+                                color: '#fff', border: 'none', padding: '.4rem .8rem',
+                                borderRadius: '8px', fontSize: '.75rem', fontWeight: 700,
+                                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+                                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                            }}
+                        >
+                            <span className="material-icons" style={{ fontSize: '1rem' }}>workspace_premium</span>
+                            XEM CHỨNG CHỈ
+                        </button>
+                    )}
                 </div>
+
             </div>
 
             {/* ── BODY (Sidebar + Content) ── */}

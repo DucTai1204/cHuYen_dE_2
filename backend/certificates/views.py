@@ -15,9 +15,17 @@ class ChungChiSoViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if getattr(user, 'vai_tro', None) == 'HocVien':
+        id_user = self.request.query_params.get('id_user')
+        
+        # Nếu là học viên, chỉ cho phép xem chứng chỉ của chính mình
+        if getattr(user, 'vai_tro', '') == 'HocVien':
             return self.queryset.filter(id_dang_ky__id_nguoi_dung=user)
-        return self.queryset
+            
+        # Với các vai trò khác (NTD, Admin), cho phép lọc theo id_user
+        if id_user:
+            return self.queryset.filter(id_dang_ky__id_nguoi_dung_id=id_user)
+            
+        return self.queryset.order_by('-ngay_cap')
 
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])

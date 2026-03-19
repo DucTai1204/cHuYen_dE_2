@@ -23,6 +23,8 @@ const Login = () => {
                 const payload = JSON.parse(atob(token.split('.')[1]));
                 if (payload.vai_tro === 'GiangVien') {
                     navigate('/seller/dashboard');
+                } else if (payload.vai_tro === 'NhaTuyenDung') {
+                    navigate('/employer');
                 } else {
                     navigate('/dashboard');
                 }
