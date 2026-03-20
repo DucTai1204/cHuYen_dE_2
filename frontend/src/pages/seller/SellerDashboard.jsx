@@ -13,6 +13,21 @@ const StatusBadge = ({ published }) => published
     ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem', padding: '.2rem .6rem', borderRadius: '99px', fontSize: '.72rem', fontWeight: 600, background: '#ecfdf5', color: '#059669' }}>● Đang bán</span>
     : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem', padding: '.2rem .6rem', borderRadius: '99px', fontSize: '.72rem', fontWeight: 600, background: '#f1f5f9', color: '#64748b' }}>○ Bản nháp</span>;
 
+/* ── Toast ── */
+const Toast = ({ msg, type = 'success' }) => (
+    <div style={{
+        position: 'fixed', bottom: '1.5rem', right: '1.5rem',
+        background: type === 'error' ? '#ef4444' : '#1e293b',
+        color: '#fff', padding: '.75rem 1.25rem',
+        borderRadius: '10px', fontSize: '.875rem',
+        zIndex: 9999, boxShadow: '0 10px 30px rgba(0,0,0,.2)',
+        display: 'flex', alignItems: 'center', gap: '.5rem',
+        animation: 'fadeUp .25s ease both',
+    }}>
+        {type === 'error' ? '❌' : '✅'} {msg}
+    </div>
+);
+
 /* ── Level Badge ── */
 const LevelBadge = ({ level }) => {
     const map = { CoSo: { label: 'Cơ sở', color: '#059669', bg: '#ecfdf5' }, TrungCap: { label: 'Trung cấp', color: '#2563eb', bg: '#eff6ff' }, NangCao: { label: 'Nâng cao', color: '#d97706', bg: '#fef3c7' } };
@@ -121,6 +136,12 @@ const SellerDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all'); // 'all' | 'published' | 'draft'
     const [search, setSearch] = useState('');
+    const [toast, setToast] = useState(null);
+
+    const showToast = (msg, type = 'success') => {
+        setToast({ msg, type });
+        setTimeout(() => setToast(null), 2800);
+    };
 
     const fetchMyCourses = () => {
         api.get('/lms/khoa-hoc/my-courses/')
@@ -132,12 +153,22 @@ const SellerDashboard = () => {
     useEffect(() => { fetchMyCourses(); }, []);
 
     const handlePublish = async (id) => {
-        await api.post(`/lms/khoa-hoc/${id}/publish/`);
-        fetchMyCourses();
+        try {
+            await api.post(`/lms/khoa-hoc/${id}/publish/`);
+            showToast('🚀 Khóa học đã được đăng bán thành công!');
+            fetchMyCourses();
+        } catch {
+            showToast('Lỗi khi đăng bán', 'error');
+        }
     };
     const handleUnpublish = async (id) => {
-        await api.post(`/lms/khoa-hoc/${id}/unpublish/`);
-        fetchMyCourses();
+        try {
+            await api.post(`/lms/khoa-hoc/${id}/unpublish/`);
+            showToast('Đã ẩn khóa học khỏi Marketplace');
+            fetchMyCourses();
+        } catch {
+            showToast('Lỗi khi ẩn khóa học', 'error');
+        }
     };
 
     const published = courses.filter(c => c.cong_khai);
@@ -242,6 +273,9 @@ const SellerDashboard = () => {
                     ))}
                 </div>
             )}
+
+            {/* Toast Notification */}
+            {toast && <Toast msg={toast.msg} type={toast.type} />}
         </div>
     );
 };
