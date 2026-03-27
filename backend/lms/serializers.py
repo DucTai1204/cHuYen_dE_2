@@ -103,6 +103,7 @@ class KhoaHocSerializer(serializers.ModelSerializer):
     tong_chuong = serializers.ReadOnlyField()
     tong_bai = serializers.ReadOnlyField()
     ten_giang_vien = serializers.CharField(source='id_giang_vien.username', read_only=True)
+    rating_details = serializers.SerializerMethodField()
 
     class Meta:
         model = KhoaHoc
@@ -110,13 +111,21 @@ class KhoaHocSerializer(serializers.ModelSerializer):
             'id_khoa_hoc', 'id_giang_vien', 'ten_khoa_hoc', 'mo_ta_ngan',
             'mo_ta_chi_tiet', 'gia_tien', 'gia_goc', 'hinh_anh_thumbnail',
             'trinh_do', 'danh_muc', 'cong_khai', 'is_sequential',
-            'trung_binh_sao', 'tong_so_danh_gia', 'tong_hoc_vien',
+            'trung_binh_sao', 'tong_so_danh_gia', 'tong_hoc_vien', 'rating_details',
             'trung_binh_sao_ntd', 'tong_so_danh_gia_ntd', 'so_nguoi_co_viec_lam',
             'chuong_set', 'bai_giang', 'ky_nang',
             'tong_chuong', 'tong_bai', 'ten_giang_vien',
             'ngay_tao', 'ngay_cap_nhat'
         ]
         read_only_fields = ['id_giang_vien', 'ngay_tao', 'ngay_cap_nhat']
+
+    def get_rating_details(self, obj):
+        from django.db.models import Count
+        ratings = obj.danh_gia.values('so_sao').annotate(count=Count('so_sao'))
+        dist = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+        for r in ratings:
+            dist[r['so_sao']] = r['count']
+        return dist
 
 
 class KhoaHocListSerializer(serializers.ModelSerializer):
@@ -125,6 +134,7 @@ class KhoaHocListSerializer(serializers.ModelSerializer):
     tong_chuong = serializers.ReadOnlyField()
     tong_bai = serializers.ReadOnlyField()
     ten_giang_vien = serializers.CharField(source='id_giang_vien.username', read_only=True)
+    rating_details = serializers.SerializerMethodField()
 
     class Meta:
         model = KhoaHoc
@@ -134,9 +144,17 @@ class KhoaHocListSerializer(serializers.ModelSerializer):
             'ngay_tao', 'ngay_cap_nhat', 'tong_chuong', 'tong_bai',
             'ten_giang_vien', 'is_sequential',
             'so_nguoi_dang_hoc', 'so_nguoi_da_hoan_thanh', 
-            'trung_binh_sao', 'tong_so_danh_gia', 'tong_hoc_vien',
+            'trung_binh_sao', 'tong_so_danh_gia', 'tong_hoc_vien', 'rating_details',
             'trung_binh_sao_ntd', 'tong_so_danh_gia_ntd', 'so_nguoi_co_viec_lam',
         ]
+
+    def get_rating_details(self, obj):
+        from django.db.models import Count
+        ratings = obj.danh_gia.values('so_sao').annotate(count=Count('so_sao'))
+        dist = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+        for r in ratings:
+            dist[r['so_sao']] = r['count']
+        return dist
 
 
 class DangKyHocSerializer(serializers.ModelSerializer):

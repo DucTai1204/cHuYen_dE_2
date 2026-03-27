@@ -24,6 +24,10 @@ import SellerSidebar from './components/SellerSidebar';
 import SellerDashboard from './pages/seller/SellerDashboard';
 import CreateCourse from './pages/seller/CreateCourse';
 import CourseBuilder from './pages/seller/CourseBuilder';
+import SellerRevenue from './pages/seller/SellerRevenue';
+import SellerStudents from './pages/seller/SellerStudents';
+import SellerReviews from './pages/seller/SellerReviews';
+import SellerSettings from './pages/seller/SellerSettings';
 
 // Recruitment pages
 import EmployerDashboard from './pages/recruitment/EmployerDashboard';
@@ -144,6 +148,18 @@ function App() {
                     } />
                     <Route path="/seller/courses/:id/builder" element={
                         <SellerRoute><SellerLayout><CourseBuilder /></SellerLayout></SellerRoute>
+                    } />
+                    <Route path="/seller/revenue" element={
+                        <SellerRoute><SellerLayout><SellerRevenue /></SellerLayout></SellerRoute>
+                    } />
+                    <Route path="/seller/students" element={
+                        <SellerRoute><SellerLayout><SellerStudents /></SellerLayout></SellerRoute>
+                    } />
+                    <Route path="/seller/reviews" element={
+                        <SellerRoute><SellerLayout><SellerReviews /></SellerLayout></SellerRoute>
+                    } />
+                    <Route path="/seller/settings" element={
+                        <SellerRoute><SellerLayout><SellerSettings /></SellerLayout></SellerRoute>
                     } />
 
                     {/* Employer routes */}

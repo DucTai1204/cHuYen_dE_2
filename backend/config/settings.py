@@ -87,11 +87,21 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+# Dùng MySQL để nhiều máy kết nối chung 1 DB
+
+import os
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.environ.get('DB_NAME', 'chuyen_de_2'),
+        'USER': os.environ.get('DB_USER', 'root'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', '123456'),
+        'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
+        'PORT': os.environ.get('DB_PORT', '3306'),
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+        },
     }
 }
 
@@ -151,9 +161,14 @@ REST_FRAMEWORK = {
 }
 
 # JWT Settings - hỗ trợ custom user model dùng PK tên 'id_nguoi_dung'
+from datetime import timedelta
+
 SIMPLE_JWT = {
     'USER_ID_FIELD': 'id_nguoi_dung',
     'USER_ID_CLAIM': 'user_id',
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),     # Token sống 1 ngày
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),     # Refresh token sống 7 ngày
+    'ROTATE_REFRESH_TOKENS': True,
 }
 
 # Logging Configuration

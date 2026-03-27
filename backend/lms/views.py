@@ -329,16 +329,20 @@ class TienDoBaiGiangViewSet(viewsets.GenericViewSet):
 
     def list(self, request):
         khoa_hoc_id = request.query_params.get('khoa_hoc')
+        student_id = request.query_params.get('user')
         if not khoa_hoc_id:
             return Response({'error': 'Cần truyền query param ?khoa_hoc=<id>'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            dang_ky = DangKyHoc.objects.get(id_nguoi_dung=request.user, id_khoa_hoc=khoa_hoc_id)
+            # Nếu truyền student_id và người gọi là Giảng viên -> Kiểm tra quyền sở hữu khóa học
+            if student_id and request.user.vai_tro == 'GiangVien':
+                dang_ky = DangKyHoc.objects.get(id_nguoi_dung_id=student_id, id_khoa_hoc_id=khoa_hoc_id, id_khoa_hoc__id_giang_vien=request.user)
+            else:
+                dang_ky = DangKyHoc.objects.get(id_nguoi_dung=request.user, id_khoa_hoc=khoa_hoc_id)
         except DangKyHoc.DoesNotExist:
-            return Response([], status=status.HTTP_200_OK)
+            return Response({'completed_lesson_ids': []}, status=status.HTTP_200_OK)
 
         records = TienDoBaiGiang.objects.filter(id_dang_ky=dang_ky, da_hoan_thanh=True)
-        # Trả về chỉ danh sách id bài đã hoàn thành cho tiện dùng ở FE
         completed = list(records.values_list('id_bai_giang', flat=True))
         return Response({'completed_lesson_ids': completed})
 

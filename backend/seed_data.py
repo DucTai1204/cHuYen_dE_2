@@ -194,14 +194,32 @@ def run_seed():
                 
                 DanhGiaKhoaHoc.objects.update_or_create(
                     id_khoa_hoc=kh, id_nguoi_dung=hv,
-                    defaults={'so_sao': random.choices([4, 5], weights=[30, 70])[0], 'nhan_xet': f"Khóa học rất chất lượng từ {kh.id_giang_vien.ho_va_ten}!"}
+                    defaults={
+                        'so_sao': random.choices([3, 4, 5], weights=[10, 30, 60])[0], 
+                        'nhan_xet': random.choice([
+                            f"Kiến thức {kh.ten_khoa_hoc} rất thực tế, giảng viên giảng rất dễ hiểu.",
+                            "Tài liệu phong phú, bài tập thực hành giúp tôi hiểu sâu hơn.",
+                            "Khóa học tuyệt vời, tôi đã áp dụng được ngay vào công việc.",
+                            "Rất đáng đồng tiền bát gạo, lộ trình học rõ ràng."
+                        ])
+                    }
                 )
 
     print("--- 6. Seed Đánh Giá NTD & Tuyển Dụng ---")
+    phien_dich_ntd = [
+        "Ứng viên có tư duy tốt, kỹ năng thực hành từ khóa học này rất sát với dự án thực tế.",
+        "Chúng tôi đánh giá cao trình độ chuyên môn của các học viên tốt nghiệp khóa này.",
+        "Kiến thức đầu ra đúng tiêu chuẩn ngành, team HR rất hài lòng.",
+        "Chất lượng đào tạo ổn định, giúp giảm thời gian đào tạo nội bộ cho nhân viên mới."
+    ]
     for ntd in ntds:
-        reviewed_course = random.sample(khoa_hoc_objs, random.randint(4, 7))
+        reviewed_course = random.sample(khoa_hoc_objs, random.randint(5, 8))
         for r_kh in reviewed_course:
-            DanhGiaNhaTuyenDung.objects.create(id_khoa_hoc=r_kh, id_nha_tuyen_dung=ntd, so_sao_phu_hop=5, nhan_xet_chuyen_mon="Kiến thức đầu ra đúng tiêu chuẩn ngành, rất tốt!")
+            DanhGiaNhaTuyenDung.objects.create(
+                id_khoa_hoc=r_kh, id_nha_tuyen_dung=ntd, 
+                so_sao_phu_hop=random.choices([4, 5], weights=[20, 80])[0], 
+                nhan_xet_chuyen_mon=random.choice(phien_dich_ntd)
+            )
             
             hoc_vien_da_xong = NguoiDung.objects.filter(dang_ky_hoc__id_khoa_hoc=r_kh, dang_ky_hoc__trang_thai_hoc='DaXong')
             for hv in hoc_vien_da_xong:
@@ -210,7 +228,7 @@ def run_seed():
                         id_nha_tuyen_dung=ntd, id_hoc_vien=hv, id_khoa_hoc=r_kh,
                         defaults={
                             'trang_thai': random.choice(['ChoXacNhan', 'DaDongY', 'TuChoi']),
-                            'ghi_chu': "Bạn có background rất ổn, team HR đang muốn set một buổi phỏng vấn."
+                            'ghi_chu': "Team phát triển sản phẩm của chúng tôi đang cần vị trí này, mời bạn tham gia phỏng vấn."
                         }
                     )
 
