@@ -2,7 +2,28 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const MI = ({ name, style }) => <span className="material-icons" style={{ fontSize: '1.2rem', ...style }}>{name}</span>;
+const MI = ({ name, style, className = '' }) => {
+    // Các icon mới này chỉ có trong Material Symbols Rounded
+    const isSymbol = ['waving_hand', 'celebration', 'workspace_premium', 'verified'].includes(name);
+    const iconClass = isSymbol ? 'material-symbols-rounded' : 'material-icons';
+    
+    return (
+        <span 
+            className={`${iconClass} ${className}`} 
+            style={{ 
+                fontSize: '1.25rem',
+                width: '1em',
+                height: '1em',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                ...style 
+            }}
+        >
+            {name}
+        </span>
+    );
+};
 
 const studentMenu = [
     { icon: 'dashboard', label: 'Dashboard', path: '/dashboard' },
