@@ -6,18 +6,18 @@ const MI = ({ name, style, className = '' }) => {
     // Các icon mới này chỉ có trong Material Symbols Rounded
     const isSymbol = ['waving_hand', 'celebration', 'workspace_premium', 'verified'].includes(name);
     const iconClass = isSymbol ? 'material-symbols-rounded' : 'material-icons';
-    
+
     return (
-        <span 
-            className={`${iconClass} ${className}`} 
-            style={{ 
+        <span
+            className={`${iconClass} ${className}`}
+            style={{
                 fontSize: '1.25rem',
                 width: '1em',
                 height: '1em',
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                ...style 
+                ...style
             }}
         >
             {name}
@@ -37,7 +37,7 @@ const recruiterMenu = [
     { icon: 'groups', label: 'Marketplace Nhân tài', path: '/employer/dashboard' },
     { icon: 'chat', label: 'Tin nhắn', path: '/employer/messages' },
     { icon: 'work', label: 'Tin tuyển dụng', path: '/employer/jobs' },
-    { icon: 'business', label: 'Hồ sơ công ty', path: '/employer/profile' },
+    { icon: 'business', label: 'Hồ sơ công ty', path: '/profile' },
 ];
 
 const getInitials = (name) => {
@@ -55,27 +55,37 @@ const Sidebar = () => {
             {/* Logo */}
             <div className="sidebar-logo">
                 <div className="logo-icon"><MI name="school" style={{ fontSize: '1.3rem' }} /></div>
-                <h2>EduChain</h2>
+                <h2>EduHKT</h2>
                 <span>Hệ sinh thái giáo dục</span>
             </div>
 
-            {/* User Info */}
-            <div className="sidebar-user">
-                <div className="user-avatar-lg" style={{ background: user?.vai_tro === 'NhaTuyenDung' ? '#1e3a8a' : 'var(--primary)' }}>
-                    {getInitials(user?.ho_va_ten || user?.username)}
+            {/* User Info - Clickable to Profile */}
+            <Link to="/profile" style={{ textDecoration: 'none' }}>
+                <div className="sidebar-user" style={{ cursor: 'pointer', transition: 'var(--t)' }}>
+                    <div className="user-avatar-lg" style={{
+                        background: user?.vai_tro === 'NhaTuyenDung' ? 'var(--secondary-dark)' : 'var(--primary)',
+                        overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                        {user?.hinh_anh_logo ? (
+                            <img src={user.hinh_anh_logo} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                            getInitials(user?.ho_va_ten || user?.username)
+                        )}
+                    </div>
+                    <p style={{ color: '#fff' }}>{user?.ho_va_ten || user?.username}</p>
+                    <div style={{ fontSize: '.7rem', color: 'rgba(255, 255, 255, 0.6)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '.3rem' }}>
+                        <MI name={user?.vai_tro === 'NhaTuyenDung' ? 'verified_user' : 'school'} style={{ fontSize: '.8rem' }} />
+                        {user?.vai_tro === 'NhaTuyenDung' ? 'NHÀ TUYỂN DỤNG' : 'HỌC VIÊN'}
+                    </div>
                 </div>
-                <p>{user?.ho_va_ten || user?.username}</p>
-                <span style={{ fontSize: '.68rem', opacity: .8 }}>
-                    {user?.vai_tro === 'NhaTuyenDung' ? 'MÃ DOANH NGHIỆP' : 'MÃ HỌC VIÊN'}: {user?.user_id || '—'}
-                </span>
-            </div>
+            </Link>
 
             {/* Navigation */}
             <nav className="sidebar-nav">
                 {(user?.vai_tro === 'NhaTuyenDung' ? recruiterMenu : studentMenu).map(item => (
                     <Link key={item.path} to={item.path}>
                         <button className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}>
-                            <span className="nav-icon" style={{ color: location.pathname === item.path ? (user?.vai_tro === 'NhaTuyenDung' ? '#1e3a8a' : 'var(--primary)') : '' }}>
+                            <span className="nav-icon" style={{ color: location.pathname === item.path ? (user?.vai_tro === 'NhaTuyenDung' ? 'var(--secondary-dark)' : '#fff') : '' }}>
                                 <MI name={item.icon} />
                             </span>
                             {item.label}

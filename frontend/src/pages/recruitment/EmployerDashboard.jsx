@@ -4,8 +4,8 @@ import api from '../../services/api';
 
 const MI = ({ name, style }) => <span className="material-icons" style={{ fontSize: '1.2rem', ...style }}>{name}</span>;
 
-const EMP_BLUE = '#1e3a8a'; 
-const EMP_BLUE_LIGHT = '#eff6ff';
+const EMP_BLUE = 'var(--secondary)'; 
+const EMP_BLUE_LIGHT = 'var(--secondary-light)';
 
 const ReviewModal = ({ talent, onClose, onReviewed }) => {
     const [star, setStar] = useState(5);
@@ -92,8 +92,8 @@ const TalentCard = ({ talent, onReviewClick }) => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                         <div style={{ fontSize: '.72rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Uy tín Doanh nghiệp</div>
-                        <div style={{ fontWeight: 800, color: '#10b981', display: 'flex', alignItems: 'center', gap: '.25rem' }}>
-                            <MI name="verified" style={{ fontSize: '1rem' }} /> {talent.trung_binh_sao_ntd || '5.0'}/5.0 
+                        <div style={{ fontWeight: 800, color: '#059669', display: 'flex', alignItems: 'center', gap: '.25rem' }}>
+                            <MI name="verified" style={{ fontSize: '1rem' }} /> {talent.trung_binh_sao_ntd || '—'}/5.0 
                             <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '.75rem' }}>({talent.tong_so_danh_gia_ntd || 0} nhận xét)</span>
                         </div>
                     </div>

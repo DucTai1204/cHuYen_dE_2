@@ -46,11 +46,12 @@ const ExamProctoring = () => {
         return () => clearInterval(t);
     }, [submitted]);
 
-    // Mock AI alerts
+    // Simulation: Mock AI activity (visual only)
     useEffect(() => {
         if (submitted) return;
-        const t = setInterval(() => { if (Math.random() > 0.85) setWarnings(w => w + 1); }, 8000);
-        return () => clearInterval(t);
+        // Warnings are now manual or triggered by real events in the future
+        // const t = setInterval(() => { if (Math.random() > 0.85) setWarnings(w => w + 1); }, 8000);
+        // return () => clearInterval(t);
     }, [submitted]);
 
     const fmt = s => `${String(Math.floor(s / 3600)).padStart(2, '0')}:${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
@@ -81,27 +82,29 @@ const ExamProctoring = () => {
 
     return (
         <div className="fade-up">
-            {/* Exam Header (Blue) */}
-            <div className="exam-header" style={{ marginBottom: '1rem' }}>
+            {/* Exam Header */}
+            <div className="exam-header" style={{ marginBottom: '1.5rem', background: 'var(--secondary)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '.75rem' }}>
                     <div>
-                        <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '.25rem' }}>Kỳ thi cuối kỳ – Lập trình Web Fullstack</h2>
-                        <div style={{ fontSize: '.82rem', opacity: .85 }}>Thời gian: 120 phút &nbsp;|&nbsp; Số câu: 40 câu</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.5rem' }}>
+                            <span className="badge" style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', fontSize: '.65rem' }}>MÔI TRƯỜNG MÔ PHỎNG AI</span>
+                        </div>
+                        <h2 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '.25rem' }}>Kỳ thi cuối kỳ – Lập trình Web Fullstack</h2>
+                        <div style={{ fontSize: '.82rem', opacity: .85 }}>Thời gian: 120 phút &nbsp;|&nbsp; Số câu: {TOTAL} câu</div>
                     </div>
-                    <div className="exam-timer">⏱ {fmt(timeLeft)}</div>
+                    <div className="exam-timer" style={{ background: 'rgba(0,0,0,0.2)' }}>⏱ {fmt(timeLeft)}</div>
                 </div>
 
                 {/* Progress bar */}
-                <div style={{ marginTop: '.75rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.78rem', opacity: .85, marginBottom: '.3rem' }}>
-                        <span>Câu {current + 1}/{TOTAL}</span>
+                <div style={{ marginTop: '1.25rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.8rem', opacity: .9, marginBottom: '.5rem' }}>
+                        <span>Tiến độ bài làm: {done}/{TOTAL} câu</span>
                         <div style={{ display: 'flex', gap: '.5rem' }}>
-                            <span style={{ background: 'var(--secondary)', padding: '.1rem .6rem', borderRadius: 'var(--r-full)', fontSize: '.72rem' }}>✅ Đã làm: {done}</span>
-                            <span style={{ background: 'rgba(255,255,255,.2)', padding: '.1rem .6rem', borderRadius: 'var(--r-full)', fontSize: '.72rem' }}>⬜ Chưa làm: {undone}</span>
+                            <span style={{ fontWeight: 700 }}>{Math.round((done / TOTAL) * 100)}%</span>
                         </div>
                     </div>
-                    <div className="progress-wrap" style={{ background: 'rgba(255,255,255,.25)', height: 5 }}>
-                        <div className="progress-bar" style={{ background: '#fff', width: `${(done / TOTAL) * 100}%` }} />
+                    <div className="progress-wrap" style={{ background: 'rgba(255,255,255,0.15)', height: 8, borderRadius: 'var(--r-full)' }}>
+                        <div className="progress-bar" style={{ background: '#fff', width: `${(done / TOTAL) * 100}%`, borderRadius: 'var(--r-full)' }} />
                     </div>
                 </div>
             </div>

@@ -24,7 +24,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = NguoiDung
         fields = [
             'id_nguoi_dung', 'username', 'email', 'ho_va_ten', 
-            'vai_tro', 'bio', 'ky_nang', 'ready_to_work', 'id_to_chuc'
+            'vai_tro', 'bio', 'hinh_anh_logo', 'ky_nang', 'ready_to_work', 'id_to_chuc'
         ]
         read_only_fields = ['id_nguoi_dung', 'username', 'vai_tro']
 

@@ -24,7 +24,7 @@ const CertificatesPage = () => {
 
     if (loading) return (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
-            <div style={{ width: 40, height: 40, border: '3px solid #e2e8f0', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            <div style={{ width: 40, height: 40, border: '3px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
     );
@@ -86,12 +86,12 @@ const CertificatesPage = () => {
                                 {/* Decorative background */}
                                 <div style={{ 
                                     height: '80px', 
-                                    background: 'linear-gradient(135deg, #1e3a8a, #3b82f6)', 
+                                    background: 'linear-gradient(135deg, var(--secondary), var(--primary))', 
                                     display: 'flex', 
                                     alignItems: 'center', 
                                     padding: '0 1.25rem' 
                                 }}>
-                                    <MI name="verified" style={{ fontSize: '2rem', color: 'rgba(255,255,255,0.9)' }} />
+                                    <MI name="verified" style={{ fontSize: '2.4rem', color: '#fff' }} />
                                 </div>
 
                                 <div style={{ padding: '1.25rem' }}>
@@ -128,7 +128,7 @@ const CertificatesPage = () => {
                                                 else alert('Thông tin chứng chỉ đang được cập nhật...');
                                             }}
                                             style={{ 
-                                                flex: 1, padding: '.6rem', background: '#2563eb', color: '#fff', 
+                                                flex: 1, padding: '.6rem', background: 'var(--primary)', color: '#fff', 
                                                 border: 'none', borderRadius: '8px', fontSize: '.85rem', fontWeight: 700, 
                                                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' 
                                             }}

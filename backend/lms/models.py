@@ -167,6 +167,8 @@ class TinNhan(models.Model):
     )
     noi_dung = models.TextField()
     ngay_gui = models.DateTimeField(auto_now_add=True)
+    is_recalled = models.BooleanField(default=False)
+    da_xem = models.BooleanField(default=False)  # Người nhận đã xem chưa
 
     class Meta:
         ordering = ['-ngay_gui']

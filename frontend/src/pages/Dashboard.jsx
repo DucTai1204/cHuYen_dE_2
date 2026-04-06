@@ -55,11 +55,11 @@ const EnrolledCard = ({ enrollment }) => {
                         : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MI name="menu_book" style={{ fontSize: '2.5rem', color: '#93c5fd' }} /></div>
                     }
                     {/* Progress overlay */}
-                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: 'rgba(0,0,0,.2)' }}>
-                        <div style={{ height: '100%', width: `${pct}%`, background: pct >= 100 ? '#10b981' : '#2563eb', transition: 'width .5s' }} />
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: 'rgba(0,0,0,.1)' }}>
+                        <div style={{ height: '100%', width: `${pct}%`, background: pct >= 100 ? '#059669' : 'var(--primary)', transition: 'width .8s ease' }} />
                     </div>
                     {pct >= 100 && (
-                        <div style={{ position: 'absolute', top: '.5rem', right: '.5rem', background: '#10b981', color: '#fff', padding: '.2rem .5rem', borderRadius: '99px', fontSize: '.68rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '.2rem' }}>
+                        <div style={{ position: 'absolute', top: '.5rem', right: '.5rem', background: '#059669', color: '#fff', padding: '.3rem .7rem', borderRadius: 'var(--r-full)', fontSize: '.65rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '.3rem', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
                             <MI name="check_circle" style={{ fontSize: '.9rem' }} /> Hoàn thành
                         </div>
                     )}
@@ -78,13 +78,13 @@ const EnrolledCard = ({ enrollment }) => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.75rem', color: 'var(--text-muted)', marginBottom: '.4rem' }}>
                         <span>Tiến độ</span>
-                        <span style={{ color: pct >= 100 ? '#10b981' : '#2563eb', fontWeight: 700 }}>{pct}%</span>
+                        <span style={{ color: pct >= 100 ? '#059669' : 'var(--primary)', fontWeight: 700 }}>{pct}%</span>
                     </div>
-                    <div style={{ height: 6, background: '#e2e8f0', borderRadius: '99px', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${pct}%`, background: pct >= 100 ? '#10b981' : '#2563eb', borderRadius: '99px', transition: 'width .5s' }} />
+                    <div style={{ height: 6, background: 'var(--border)', borderRadius: 'var(--r-full)', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${pct}%`, background: pct >= 100 ? '#059669' : 'var(--primary)', borderRadius: 'var(--r-full)', transition: 'width .8s ease' }} />
                     </div>
-                    <div style={{ marginTop: '.75rem', padding: '.4rem .75rem', background: '#2563eb', color: '#fff', borderRadius: '7px', textAlign: 'center', fontSize: '.8rem', fontWeight: 600 }}>
-                        {pct >= 100 ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.2rem' }}><MI name="workspace_premium" style={{ fontSize: '.95rem' }} /> Xem chứng chỉ</span> : pct > 0 ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.2rem' }}><MI name="play_circle" style={{ fontSize: '.95rem' }} /> Học tiếp</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.2rem' }}><MI name="play_circle" style={{ fontSize: '.95rem' }} /> Bắt đầu học</span>}
+                    <div className="btn btn-primary btn-full" style={{ marginTop: '.75rem', padding: '.5rem' }}>
+                        {pct >= 100 ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem' }}><MI name="workspace_premium" style={{ fontSize: '1rem' }} /> Xem chứng chỉ</span> : pct > 0 ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem' }}><MI name="play_circle" style={{ fontSize: '1rem' }} /> Học tiếp</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem' }}><MI name="play_circle" style={{ fontSize: '1rem' }} /> Bắt đầu học</span>}
                     </div>
                 </div>
             </div>
@@ -100,7 +100,7 @@ const calculateTrustScore = (course) => {
     const total = (Number(course.so_nguoi_dang_hoc || 0) + Number(course.so_nguoi_da_hoan_thanh || 0)) || 1;
     const completionRate = (Number(course.so_nguoi_da_hoan_thanh || 0) / total);
     const completionFactor = completionRate * 10 * 0.25;
-    const passRate = 0.85; // Giả sử tỷ lệ pass chung là 85% nếu chưa có data thực tế
+    const passRate = course.ty_le_dau || 0; 
     const passFactor = passRate * 10 * 0.20;
     const hiringRate = Number(course.so_nguoi_da_hoan_thanh) > 0 
         ? Math.min(Number(course.so_nguoi_co_viec_lam) / Number(course.so_nguoi_da_hoan_thanh), 1)
@@ -108,7 +108,7 @@ const calculateTrustScore = (course) => {
     const hiringFactor = hiringRate * 10 * 0.25;
     
     const score = reviewFactor + completionFactor + passFactor + hiringFactor;
-    return Math.max(score, 5.0).toFixed(1); // Tối thiểu 5.0 để nhìn cho đẹp
+    return (score || 0).toFixed(1);
 };
 
 /* ══════════════════════════════
@@ -156,21 +156,38 @@ const ExploreCard = ({ course }) => {
                     </div>
 
                     {/* Trust Score Widget */}
-                    <div style={{ background: 'linear-gradient(90deg, #f8fafc, #f1f5f9)', borderRadius: '10px', padding: '.6rem .75rem', marginBottom: '.75rem', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ background: 'var(--bg-hover)', borderRadius: 'var(--r-md)', padding: '.75rem 1rem', marginBottom: '.75rem', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div>
-                            <div style={{ fontSize: '.62rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '.03em' }}>Trust Score</div>
-                            <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#1e3a8a', lineHeight: 1 }}>
-                                {calculateTrustScore(course)}<span style={{ fontSize: '.75rem', opacity: .6 }}>/10</span>
+                            <div style={{ fontSize: '.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '.05em' }}>Trust Score</div>
+                            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--secondary)', lineHeight: 1, fontFamily: 'Poppins, sans-serif' }}>
+                                {calculateTrustScore(course)}<span style={{ fontSize: '.85rem', opacity: .5 }}>/10</span>
                             </div>
-                            <div style={{ fontSize: '.6rem', color: '#059669', fontWeight: 800 }}>
-                                <MI name="check_circle" style={{ fontSize: '.7rem', verticalAlign: 'middle' }} /> {Number(course.tong_so_danh_gia_ntd) > 0 ? `${course.tong_so_danh_gia_ntd} DN đánh giá` : 'Đang cập nhật'}
+                            <div style={{ fontSize: '.65rem', color: '#059669', fontWeight: 700, marginTop: '.2rem', display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                    {(course.employer_endorsements || []).slice(0, 3).map((emp, idx) => (
+                                        <div key={idx} style={{ 
+                                            width: 18, height: 18, borderRadius: '50%', background: '#fff', 
+                                            border: '2px solid #fff', marginLeft: idx > 0 ? -6 : 0, overflow: 'hidden',
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)', zIndex: 3 - idx
+                                        }}>
+                                            {emp.hinh_anh_logo ? (
+                                                <img src={emp.hinh_anh_logo} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            ) : (
+                                                <div style={{ background: 'var(--primary)', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px' }}>
+                                                    {emp.ten_nha_tuyen_dung?.[0]}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                                <span>{Number(course.tong_so_danh_gia_ntd) > 0 ? `${course.tong_so_danh_gia_ntd} DN đánh giá` : 'Đang cập nhật'}</span>
                             </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '.85rem', fontWeight: 700, color: '#059669', display: 'flex', alignItems: 'center', gap: '.2rem', justifyContent: 'flex-end' }}>
-                                <MI name="trending_up" style={{ fontSize: '1rem' }} /> {Math.round((Number(course.so_nguoi_co_viec_lam) / (Number(course.so_nguoi_da_hoan_thanh) || 1)) * 100)}%
+                            <div style={{ fontSize: '.9rem', fontWeight: 800, color: '#059669', display: 'flex', alignItems: 'center', gap: '.3rem', justifyContent: 'flex-end' }}>
+                                <MI name="trending_up" style={{ fontSize: '1.1rem' }} /> {Math.round((Number(course.so_nguoi_co_viec_lam) / (Number(course.so_nguoi_da_hoan_thanh) || 1)) * 100)}%
                             </div>
-                            <div style={{ fontSize: '.6rem', color: 'var(--text-muted)', fontWeight: 600 }}>Tỉ lệ việc làm</div>
+                            <div style={{ fontSize: '.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>Tỉ lệ việc làm</div>
                         </div>
                     </div>
 
@@ -183,12 +200,12 @@ const ExploreCard = ({ course }) => {
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px dashed #e2e8f0', paddingTop: '.75rem' }}>
-                        <span style={{ fontWeight: 800, color: '#d97706', fontSize: '1.05rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px dashed var(--border)', paddingTop: '.875rem' }}>
+                        <span style={{ fontWeight: 800, color: 'var(--secondary)', fontSize: '1.2rem', fontFamily: 'Poppins, sans-serif' }}>
                             {Number(course.gia_tien) === 0 ? 'MIỄN PHÍ' : `${Number(course.gia_tien).toLocaleString('vi-VN')}₫`}
                         </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '.2rem', color: '#2563eb', fontSize: '.78rem', fontWeight: 700 }}>
-                             Chi tiết <MI name="chevron_right" style={{ fontSize: '1rem' }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '.3rem', color: 'var(--primary)', fontSize: '.850rem', fontWeight: 700 }}>
+                             Chi tiết <MI name="chevron_right" style={{ fontSize: '1.1rem' }} />
                         </div>
                     </div>
                 </div>
@@ -200,29 +217,14 @@ const ExploreCard = ({ course }) => {
 /* ══════════════════════════════
    CAREER LIST (Danh sách được tuyển)
    ══════════════════════════════ */
-const CareerList = () => {
-    const [hiredData, setHiredData] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    const fetchHired = () => {
-        setLoading(true);
-        api.get('/lms/tuyen-dung/')
-            .then(res => setHiredData(res.data || []))
-            .catch(err => console.error(err))
-            .finally(() => setLoading(false));
-    };
-
-    useEffect(() => {
-        fetchHired();
-    }, []);
-
+const CareerList = ({ data, loading, onRefresh }) => {
     const handleUpdateStatus = async (id, status) => {
         const msg = status === 'DaDongY' ? 'chấp nhận lời mời làm việc' : 'từ chối lời mời này';
         if(!window.confirm(`Bạn có chắc muốn ${msg}?`)) return;
         try {
             await api.patch(`/lms/tuyen-dung/${id}/`, { trang_thai: status });
             alert('Cập nhật trạng thái thành công!');
-            fetchHired();
+            onRefresh();
         } catch (err) {
             alert('Lỗi cập nhật trạng thái');
         }
@@ -230,7 +232,7 @@ const CareerList = () => {
 
     if (loading) return <div style={{ textAlign: 'center', padding: '3rem' }}>Đang kiểm tra thông tin tuyển dụng...</div>;
     
-    if (hiredData.length === 0) return (
+    if (data.length === 0) return (
         <div style={{ textAlign: 'center', padding: '5rem 2rem', background: '#fff', borderRadius: '15px', border: '1px solid var(--border)' }}>
             <MI name="work_outline" style={{ fontSize: '3.5rem', color: '#cbd5e1', marginBottom: '1rem' }} />
             <h3 style={{ fontWeight: 700, color: 'var(--text-muted)' }}>Chưa có lời mời tuyển dụng chính thức</h3>
@@ -242,9 +244,9 @@ const CareerList = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div style={{ background: 'linear-gradient(135deg, #1e3a8a, #3b82f6)', padding: '1.5rem', borderRadius: '15px', color: '#fff', marginBottom: '.5rem', boxShadow: '0 10px 20px rgba(30,58,138,.2)' }}>
                 <h3 style={{ marginBottom: '.5rem', display: 'flex', alignItems: 'center', gap: '.5rem', fontWeight: 800 }}><MI name="celebration" /> Chào mừng bạn!</h3>
-                <p style={{ fontSize: '.95rem', opacity: .9 }}>Bạn nhận được <strong>{hiredData.length} lời mời tuyển dụng</strong> dựa trên kết quả học tập xuất sắc của mình.</p>
+                <p style={{ fontSize: '.95rem', opacity: .9 }}>Bạn nhận được <strong>{data.length} lời mời tuyển dụng</strong> dựa trên kết quả học tập xuất sắc của mình.</p>
             </div>
-            {hiredData.map(h => (
+            {data.map(h => (
                 <div key={h.id_tuyen_dung} style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: 'var(--shadow-sm)' }}>
                     <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
                         <div style={{ width: 48, height: 48, background: '#eff6ff', color: '#1e3a8a', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -285,34 +287,45 @@ const Dashboard = () => {
 
     const [myEnrollments, setMyEnrollments] = useState([]);
     const [allCourses, setAllCourses] = useState([]);
+    const [hiredData, setHiredData] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [hiringLoading, setHiringLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState('exploring'); // 'learning' | 'exploring' | 'career'
+
+    const fetchHired = () => {
+        setHiringLoading(true);
+        api.get('/lms/tuyen-dung/')
+            .then(res => setHiredData(res.data || []))
+            .catch(err => console.error(err))
+            .finally(() => setHiringLoading(false));
+    };
 
     useEffect(() => {
         // Lấy khóa học đã đăng ký
         const p1 = api.get('/lms/dang-ky-hoc/')
             .then(res => {
                 const data = res.data || [];
-                console.log('[Dashboard] Enrollments:', data.length, data);
                 setMyEnrollments(data);
             })
             .catch(err => {
-                console.error('[Dashboard] Enrollments error:', err?.response?.status, err?.response?.data);
+                console.error('[Dashboard] Enrollments error:', err);
                 setMyEnrollments([]);
             });
 
-        // Lấy tất cả khóa học public (cong_khai=True)
+        // Lấy tất cả khóa học public
         const p2 = api.get('/lms/khoa-hoc/')
             .then(res => {
                 const data = res.data || [];
-                console.log('[Dashboard] All courses:', data.length, data);
                 setAllCourses(data);
             })
             .catch(err => {
-                console.error('[Dashboard] Courses error:', err?.response?.status, err?.response?.data);
+                console.error('[Dashboard] Courses error:', err);
                 setAllCourses([]);
             });
+
+        // Lấy dữ liệu tuyển dụng
+        fetchHired();
 
         Promise.all([p1, p2]).finally(() => setLoading(false));
     }, []);
@@ -342,65 +355,65 @@ const Dashboard = () => {
 
     return (
         <div className="fade-up">
-            {/* ── WELCOME HEADER ── */}
-            <div style={{ marginBottom: '1.5rem' }}>
-                <h1 style={{ fontSize: '1.3rem', fontWeight: 700, marginBottom: '.25rem' }}>
-                    Chào mừng trở lại, {user?.ho_va_ten?.split(' ').pop() || user?.username} <MI name="waving_hand" style={{ fontSize: '1.2rem', verticalAlign: 'middle' }} />
-                </h1>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '.875rem' }}>
-                    {myEnrollments.length > 0
-                        ? `Bạn đang học ${myEnrollments.length} khóa học · Tiến độ trung bình ${avgProgress}%`
-                        : 'Khám phá và đăng ký khóa học phù hợp với bạn'
-                    }
-                </p>
-            </div>
+            {/* ── HERO BANNER (DASHBOARD) ── */}
+            <div className="hero-banner">
+                <div className="hero-welcome">
+                    <h1>
+                        Chào mừng trở lại, {user?.ho_va_ten?.split(' ').pop() || user?.username} <MI name="waving_hand" style={{ fontSize: '1.2rem', verticalAlign: 'middle' }} />
+                    </h1>
+                    <p>
+                        {myEnrollments.length > 0
+                            ? `Bạn đang học ${myEnrollments.length} khóa học · Tiến độ trung bình ${avgProgress}%`
+                            : 'Khám phá và đăng ký khóa học phù hợp với bạn'
+                        }
+                    </p>
+                </div>
 
-            {/* ── STATS ── */}
-            <div className="grid-3" style={{ marginBottom: '1.5rem' }}>
-                {[
-                    { icon: 'menu_book', label: 'Đang học', value: myEnrollments.length, color: '#2563eb', bg: '#eff6ff' },
-                    { icon: 'check_circle', label: 'Hoàn thành', value: totalDone, color: '#10b981', bg: '#ecfdf5' },
-                    { icon: 'explore', label: 'Khóa học mới', value: exploreCourses.length, color: '#d97706', bg: '#fef3c7' },
-                ].map((s, i) => (
-                    <div key={i} style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: 'var(--shadow-sm)' }}>
-                        <div style={{ width: 44, height: 44, background: s.bg, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <MI name={s.icon} style={{ fontSize: '1.4rem', color: s.color }} />
+                <div className="compact-stats">
+                    {[
+                        { icon: 'menu_book', label: 'Đang học', value: myEnrollments.length },
+                        { icon: 'check_circle', label: 'Hoàn thành', value: totalDone },
+                        { icon: 'trending_up', label: 'Tín nhiệm', value: user?.trust_score || '—' },
+                    ].map((s, i) => (
+                        <div key={i} className="stat-chip">
+                            <div className="chip-icon">
+                                <MI name={s.icon} />
+                            </div>
+                            <div className="chip-info">
+                                <span className="chip-value">{s.value}</span>
+                                <span className="chip-label">{s.label}</span>
+                            </div>
                         </div>
-                        <div>
-                            <div style={{ fontSize: '1.4rem', fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</div>
-                            <div style={{ fontSize: '.78rem', color: 'var(--text-muted)', marginTop: '.2rem' }}>{s.label}</div>
-                        </div>
-                    </div>
-                ))}
+                    ))}
+                </div>
             </div>
 
-            {/* ── SEARCH ── */}
-            <div style={{ marginBottom: '1.25rem', position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '.9rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}><MI name="search" style={{ fontSize: '1.1rem' }} /></span>
-                <input
-                    className="search-input"
-                    value={search} onChange={e => setSearch(e.target.value)}
-                    placeholder="Tìm kiếm khóa học..."
-                    style={{ paddingLeft: '2.4rem' }}
-                />
-            </div>
+            {/* ── INTEGRATED NAV BAR (TABS + SEARCH) ── */}
+            <div className="nav-integrated-bar">
+                <div className="tabs-minimal">
+                    {[
+                        { id: 'learning', label: `Đang học (${myEnrollments.length})` },
+                        { id: 'exploring', label: `Khám phá (${exploreCourses.length})` },
+                        { id: 'career', label: `Tuyển dụng (${hiredData.length})` },
+                    ].map(tab => (
+                        <button 
+                            key={tab.id} 
+                            onClick={() => setActiveTab(tab.id)} 
+                            className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
 
-            {/* ── TABS ── */}
-            <div style={{ display: 'flex', gap: '.25rem', background: '#fff', border: '1px solid var(--border)', borderRadius: '10px', padding: '.3rem', marginBottom: '1.25rem', boxShadow: 'var(--shadow-sm)' }}>
-                {[
-                    { id: 'learning', label: `Khóa học của tôi (${myEnrollments.length})` },
-                    { id: 'exploring', label: `Khám phá (${exploreCourses.length})` },
-                    { id: 'career', label: `Sự nghiệp & Việc làm` },
-                ].map(tab => (
-                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-                        flex: 1, padding: '.5rem .75rem', border: 'none', borderRadius: '7px', cursor: 'pointer',
-                        background: activeTab === tab.id ? '#eff6ff' : 'transparent',
-                        color: activeTab === tab.id ? '#2563eb' : 'var(--text-secondary)',
-                        fontWeight: activeTab === tab.id ? 700 : 400, fontSize: '.85rem', transition: 'all .18s',
-                    }}>
-                        {tab.label}
-                    </button>
-                ))}
+                <div className="search-compact">
+                    <span className="search-icon"><MI name="search" /></span>
+                    <input
+                        value={search} 
+                        onChange={e => setSearch(e.target.value)}
+                        placeholder="Tìm kiếm khóa học..."
+                    />
+                </div>
             </div>
 
             {/* ── TAB: KHÓA HỌC CỦA TÔI ── */}
@@ -454,9 +467,9 @@ const Dashboard = () => {
                 )
             )}
 
-            {/* ── TAB: SỰ NGHIỆP ── */}
+            {/* ── TAB: TUYỂN DỤNG ── */}
             {activeTab === 'career' && (
-                <CareerList />
+                <CareerList data={hiredData} loading={hiringLoading} onRefresh={fetchHired} />
             )}
         </div>
     );

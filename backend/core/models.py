@@ -33,6 +33,7 @@ class NguoiDung(AbstractUser):
     vai_tro = models.CharField(max_length=50, choices=VAI_TRO_CHOICES, default='HocVien')
     trang_thai = models.BooleanField(default=True)
     bio = models.TextField(blank=True, null=True)
+    hinh_anh_logo = models.TextField(blank=True, null=True, help_text="Link ảnh hoặc dữ liệu Base64 của logo/avatar")
     ky_nang = models.TextField(blank=True, null=True, help_text="Danh sách kỹ năng cách nhau dấu phẩy")
     ready_to_work = models.BooleanField(default=True)
 

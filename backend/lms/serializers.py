@@ -104,6 +104,7 @@ class KhoaHocSerializer(serializers.ModelSerializer):
     tong_bai = serializers.ReadOnlyField()
     ten_giang_vien = serializers.CharField(source='id_giang_vien.username', read_only=True)
     rating_details = serializers.SerializerMethodField()
+    employer_endorsements = serializers.SerializerMethodField()
 
     class Meta:
         model = KhoaHoc
@@ -113,6 +114,7 @@ class KhoaHocSerializer(serializers.ModelSerializer):
             'trinh_do', 'danh_muc', 'cong_khai', 'is_sequential',
             'trung_binh_sao', 'tong_so_danh_gia', 'tong_hoc_vien', 'rating_details',
             'trung_binh_sao_ntd', 'tong_so_danh_gia_ntd', 'so_nguoi_co_viec_lam',
+            'employer_endorsements',
             'chuong_set', 'bai_giang', 'ky_nang',
             'tong_chuong', 'tong_bai', 'ten_giang_vien',
             'ngay_tao', 'ngay_cap_nhat'
@@ -127,6 +129,17 @@ class KhoaHocSerializer(serializers.ModelSerializer):
             dist[r['so_sao']] = r['count']
         return dist
 
+    def get_employer_endorsements(self, obj):
+        # Lấy danh sách các NTD đã đánh giá
+        ratings = obj.danh_gia_ntd.select_related('id_nha_tuyen_dung').all()
+        return [
+            {
+                "ten_nha_tuyen_dung": r.id_nha_tuyen_dung.ho_va_ten or r.id_nha_tuyen_dung.username,
+                "hinh_anh_logo": r.id_nha_tuyen_dung.hinh_anh_logo
+            }
+            for r in ratings
+        ]
+
 
 class KhoaHocListSerializer(serializers.ModelSerializer):
     """Serializer gọn cho danh sách marketplace (không nested bài giảng chi tiết)"""
@@ -135,6 +148,7 @@ class KhoaHocListSerializer(serializers.ModelSerializer):
     tong_bai = serializers.ReadOnlyField()
     ten_giang_vien = serializers.CharField(source='id_giang_vien.username', read_only=True)
     rating_details = serializers.SerializerMethodField()
+    employer_endorsements = serializers.SerializerMethodField()
 
     class Meta:
         model = KhoaHoc
@@ -146,6 +160,7 @@ class KhoaHocListSerializer(serializers.ModelSerializer):
             'so_nguoi_dang_hoc', 'so_nguoi_da_hoan_thanh', 
             'trung_binh_sao', 'tong_so_danh_gia', 'tong_hoc_vien', 'rating_details',
             'trung_binh_sao_ntd', 'tong_so_danh_gia_ntd', 'so_nguoi_co_viec_lam',
+            'employer_endorsements',
         ]
 
     def get_rating_details(self, obj):
@@ -155,6 +170,16 @@ class KhoaHocListSerializer(serializers.ModelSerializer):
         for r in ratings:
             dist[r['so_sao']] = r['count']
         return dist
+
+    def get_employer_endorsements(self, obj):
+        ratings = obj.danh_gia_ntd.select_related('id_nha_tuyen_dung').all()
+        return [
+            {
+                "ten_nha_tuyen_dung": r.id_nha_tuyen_dung.ho_va_ten or r.id_nha_tuyen_dung.username,
+                "hinh_anh_logo": r.id_nha_tuyen_dung.hinh_anh_logo
+            }
+            for r in ratings
+        ]
 
 
 class DangKyHocSerializer(serializers.ModelSerializer):
@@ -190,16 +215,22 @@ class TinNhanSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TinNhan
-        fields = ['id_tin_nhan', 'id_nguoi_gui', 'ten_nguoi_gui', 'id_nguoi_nhan', 'ten_nguoi_nhan', 'noi_dung', 'ngay_gui']
-        read_only_fields = ['id_nguoi_gui', 'ngay_gui']
+        fields = ['id_tin_nhan', 'id_nguoi_gui', 'ten_nguoi_gui', 'id_nguoi_nhan', 'ten_nguoi_nhan', 'noi_dung', 'ngay_gui', 'is_recalled', 'da_xem']
+        read_only_fields = ['id_nguoi_gui', 'ngay_gui', 'da_xem']
 
 
 class DanhGiaNhaTuyenDungSerializer(serializers.ModelSerializer):
-    ten_nha_tuyen_dung = serializers.CharField(source='id_nha_tuyen_dung.username', read_only=True)
+    ten_nha_tuyen_dung = serializers.CharField(source='id_nha_tuyen_dung.ho_va_ten', read_only=True)
+    ten_dang_nhap = serializers.CharField(source='id_nha_tuyen_dung.username', read_only=True)
+    hinh_anh_logo = serializers.CharField(source='id_nha_tuyen_dung.hinh_anh_logo', read_only=True)
 
     class Meta:
         model = DanhGiaNhaTuyenDung
-        fields = ['id_danh_gia', 'id_khoa_hoc', 'id_nha_tuyen_dung', 'ten_nha_tuyen_dung', 'so_sao_phu_hop', 'nhan_xet_chuyen_mon', 'ngay_tao']
+        fields = [
+            'id_danh_gia', 'id_khoa_hoc', 'id_nha_tuyen_dung', 
+            'ten_nha_tuyen_dung', 'ten_dang_nhap', 'hinh_anh_logo', 
+            'so_sao_phu_hop', 'nhan_xet_chuyen_mon', 'ngay_tao'
+        ]
         read_only_fields = ['id_nha_tuyen_dung', 'ngay_tao']
 
 

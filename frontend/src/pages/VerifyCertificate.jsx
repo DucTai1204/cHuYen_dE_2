@@ -33,7 +33,7 @@ const VerifyCertificate = () => {
                         <MI name={error ? 'cancel' : 'verified'} style={{ fontSize: '3rem', color: error ? '#ef4444' : '#10b981' }} />
                     </div>
                     <h2 style={{ fontSize: '1.4rem', fontWeight: 700 }}>Xác Thực Chứng Chỉ Số</h2>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '.9rem', marginTop: '.3rem' }}>Hệ thống EduChain Blockchain Verification</p>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '.9rem', marginTop: '.3rem' }}>Hệ thống EduHKT Blockchain Verification</p>
                 </div>
 
                 {error ? (
@@ -45,10 +45,10 @@ const VerifyCertificate = () => {
                 ) : (
                     <>
                         {/* Visual Certificate Card */}
-                        <div style={{ 
-                            background: 'white', 
-                            padding: '2.5rem', 
-                            borderRadius: '16px', 
+                        <div style={{
+                            background: 'white',
+                            padding: '2.5rem',
+                            borderRadius: '16px',
                             boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
                             border: '1px solid #e2e8f0',
                             marginBottom: '2rem',
@@ -59,7 +59,7 @@ const VerifyCertificate = () => {
                             {/* Decorative elements */}
                             <div style={{ position: 'absolute', top: -40, right: -40, width: 120, height: 120, background: 'rgba(59, 130, 246, 0.05)', borderRadius: '50%' }} />
                             <div style={{ position: 'absolute', bottom: -20, left: -20, width: 80, height: 80, background: 'rgba(16, 185, 129, 0.05)', borderRadius: '50%' }} />
-                            
+
                             <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
                                 <div style={{ fontSize: '.75rem', fontWeight: 800, color: '#3b82f6', letterSpacing: '.2em', textTransform: 'uppercase', marginBottom: '.5rem' }}>
                                     Chứng Chỉ Hoàn Thành
@@ -68,7 +68,7 @@ const VerifyCertificate = () => {
                                     CERTIFICATE
                                 </h1>
                                 <div style={{ width: 60, height: 2, background: '#3b82f6', margin: '.75rem auto' }} />
-                                <div style={{ fontSize: '.85rem', color: '#64748b' }}>Hệ thống đào tạo trực tuyến EduChain</div>
+                                <div style={{ fontSize: '.85rem', color: '#64748b' }}>Hệ thống đào tạo trực tuyến EduHKT</div>
                             </div>
 
                             <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
@@ -95,7 +95,7 @@ const VerifyCertificate = () => {
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
                                     <div style={{ fontSize: '.75rem', color: '#94a3b8' }}>Tổ chức cấp</div>
-                                    <div style={{ fontSize: '.85rem', fontWeight: 600 }}>{certData.ten_to_chuc_cap || 'EduChain Academy'}</div>
+                                    <div style={{ fontSize: '.85rem', fontWeight: 600 }}>{certData.ten_to_chuc_cap || 'EduHKT Academy'}</div>
                                 </div>
                             </div>
                         </div>
@@ -110,7 +110,7 @@ const VerifyCertificate = () => {
                             {[
                                 { label: 'Mã định danh (UUID)', value: certData.ma_uuid_chung_chi, small: true },
                                 { label: 'Blockchain Hash', value: certData.chuoi_hash_blockchain || 'Đang đồng bộ...', small: true },
-                                { label: 'Tổ chức cấp chuyển môn', value: certData.ten_to_chuc_cap || 'EduChain / ' + (certData.id_dang_ky?.id_khoa_hoc?.id_giang_vien?.ho_va_ten || 'Giảng viên hệ thống') },
+                                { label: 'Tổ chức cấp chuyển môn', value: certData.ten_to_chuc_cap || 'EduHKT / ' + (certData.id_dang_ky?.id_khoa_hoc?.id_giang_vien?.ho_va_ten || 'Giảng viên hệ thống') },
                                 { label: 'Trạng thái hiệu lực', value: certData.trang_thai === 'HieuLuc' ? 'Đang có hiệu lực' : 'Đã thu hồi' },
                             ].map(({ label, value, small }) => (
                                 <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '.75rem 1rem', borderBottom: '1px solid #f1f5f9' }}>
@@ -120,13 +120,13 @@ const VerifyCertificate = () => {
                             ))}
                         </div>
 
-                        <button 
-                            className="btn-primary" 
-                            style={{ 
-                                width: '100%', 
-                                justifyContent: 'center', 
-                                display: 'inline-flex', 
-                                alignItems: 'center', 
+                        <button
+                            className="btn-primary"
+                            style={{
+                                width: '100%',
+                                justifyContent: 'center',
+                                display: 'inline-flex',
+                                alignItems: 'center',
                                 gap: '.6rem',
                                 padding: '1rem',
                                 borderRadius: '12px',
@@ -136,7 +136,7 @@ const VerifyCertificate = () => {
                                 fontWeight: 700,
                                 cursor: 'pointer',
                                 transition: 'all 0.2s'
-                            }} 
+                            }}
                             onClick={() => window.print()}
                         >
                             <MI name="print" style={{ fontSize: '1.2rem' }} /> In chứng chỉ / Tải về PDF

@@ -16,11 +16,22 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    // Hàm cập nhật user từ API để lấy đủ logo/avatar (vì JWT không chứa cái này)
+    const refreshUser = async () => {
+        try {
+            const res = await api.get('/auth/profile/');
+            setUser(prev => ({ ...prev, ...res.data }));
+        } catch (error) {
+            console.error('Không thể làm mới thông tin người dùng:', error);
+        }
+    };
+
     useEffect(() => {
         const token = localStorage.getItem('access_token');
         if (token) {
             const decoded = parseJwt(token);
-            setUser({ ...decoded, token }); // Giả định decoded có thông tin roles
+            setUser({ ...decoded, token });
+            refreshUser(); // Gọi thêm để lấy logo, bio...
         }
         setLoading(false);
     }, []);
@@ -33,6 +44,7 @@ export const AuthProvider = ({ children }) => {
             localStorage.setItem('refresh_token', refresh);
             const decoded = parseJwt(access);
             setUser({ ...decoded, token: access });
+            await refreshUser(); // Lấy đủ profile ngay sau khi login
             return true;
         } catch (error) {
             console.error(error);
@@ -47,7 +59,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading }}>
+        <AuthContext.Provider value={{ user, setUser, login, logout, loading, refreshUser }}>
             {!loading && children}
         </AuthContext.Provider>
     );

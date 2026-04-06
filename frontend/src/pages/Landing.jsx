@@ -16,7 +16,7 @@ const Landing = () => (
         <header style={{ background: '#fff', borderBottom: '1px solid var(--border)', padding: '.9rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
                 <div style={{ width: 34, height: 34, background: 'var(--primary)', borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '1rem' }}><MI name="school" style={{ fontSize: '1.2rem' }} /></div>
-                <strong style={{ color: 'var(--primary)', fontSize: '1rem' }}>EduChain</strong>
+                <strong style={{ color: 'var(--primary)', fontSize: '1rem' }}>EduHKT</strong>
             </div>
             <div style={{ display: 'flex', gap: '.75rem' }}>
                 <Link to="/login"><button className="btn btn-secondary">Đăng nhập</button></Link>
@@ -66,9 +66,9 @@ const Landing = () => (
             <p style={{ color: 'rgba(255,255,255,.8)', marginBottom: '1.5rem', fontSize: '.95rem' }}>
                 Bất kỳ ai cũng có thể tra cứu tính hợp lệ — không cần đăng nhập.
             </p>
-            <Link to="/verify/demo-uuid">
+            <Link to="/register">
                 <button className="btn btn-lg" style={{ background: '#fff', color: 'var(--primary)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '.4rem' }}>
-                    <MI name="search" style={{ fontSize: '1.1rem' }} /> Xem trang Verify Certificate
+                    <MI name="verified" style={{ fontSize: '1.1rem' }} /> Bắt đầu xác thực ngay
                 </button>
             </Link>
         </section>

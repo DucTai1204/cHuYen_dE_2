@@ -2,9 +2,16 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+const MI = ({ name, style, onClick }) => (
+    <span className="material-icons" style={{ fontSize: '1.2rem', ...style }} onClick={onClick}>
+        {name}
+    </span>
+);
+
 const Login = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const { login } = useAuth();
@@ -17,14 +24,13 @@ const Login = () => {
         const ok = await login(username, password);
         setLoading(false);
         if (ok) {
-            // Đọc vai trò từ token vừa lưu
             try {
                 const token = localStorage.getItem('access_token');
                 const payload = JSON.parse(atob(token.split('.')[1]));
                 if (payload.vai_tro === 'GiangVien') {
                     navigate('/seller/dashboard');
                 } else if (payload.vai_tro === 'NhaTuyenDung') {
-                    navigate('/employer');
+                    navigate('/employer/dashboard');
                 } else {
                     navigate('/dashboard');
                 }
@@ -40,13 +46,20 @@ const Login = () => {
         <div className="auth-page">
             <div className="auth-card fade-up">
                 {/* Header */}
-                <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
-                    <div style={{ width: 52, height: 52, background: 'var(--primary)', borderRadius: 'var(--r-md)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', color: '#fff', marginBottom: '1rem' }}>🎓</div>
-                    <h2 style={{ fontWeight: 700, fontSize: '1.3rem' }}>Đăng nhập</h2>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '.875rem', marginTop: '.3rem' }}>Chào mừng trở lại EduChain</p>
+                <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                    <div style={{
+                        width: 48, height: 48, background: 'var(--primary)',
+                        borderRadius: 'var(--r-md)', display: 'inline-flex',
+                        alignItems: 'center', justifyContent: 'center',
+                        color: '#fff', marginBottom: '.75rem'
+                    }}>
+                        <MI name="lock" style={{ fontSize: '1.4rem' }} />
+                    </div>
+                    <h2 style={{ fontSize: '1.25rem', marginBottom: '.25rem' }}>Chào mừng trở lại</h2>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '.85rem' }}>Đăng nhập để vào hệ thống EduHKT</p>
                 </div>
 
-                {error && <div className="alert alert-danger">{error}</div>}
+                {error && <div className="alert alert-danger" style={{ padding: '.65rem', fontSize: '.8rem', marginBottom: '1rem' }}>{error}</div>}
 
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">
@@ -55,25 +68,34 @@ const Login = () => {
                     </div>
                     <div className="form-group">
                         <label className="form-label">Mật khẩu</label>
-                        <input type="password" className="form-input" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required />
+                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                className="form-input"
+                                placeholder="••••••••"
+                                value={password}
+                                onChange={e => setPassword(e.target.value)}
+                                style={{ paddingRight: '2.5rem' }}
+                                required
+                            />
+                            <MI
+                                name={showPassword ? 'visibility_off' : 'visibility'}
+                                style={{ position: 'absolute', right: '.8rem', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.1rem' }}
+                                onClick={() => setShowPassword(!showPassword)}
+                            />
+                        </div>
                     </div>
-                    <button type="submit" className="btn btn-primary btn-full" style={{ marginTop: '.5rem', padding: '.75rem', fontSize: '.95rem' }} disabled={loading}>
-                        {loading ? 'Đang đăng nhập...' : 'Vào hệ thống'}
+                    <button type="submit" className="btn btn-primary" style={{ padding: '.75rem 2.5rem', marginTop: '.75rem', display: 'block', margin: '0 auto' }} disabled={loading}>
+                        {loading ? 'Đang xác thực...' : 'Đăng nhập'}
                     </button>
                 </form>
 
-                <div className="divider" />
+                <div className="divider" style={{ margin: '1.25rem 0' }} />
 
-                <p style={{ textAlign: 'center', fontSize: '.875rem', color: 'var(--text-secondary)' }}>
+                <p style={{ textAlign: 'center', fontSize: '.85rem', color: 'var(--text-secondary)' }}>
                     Chưa có tài khoản?{' '}
-                    <Link to="/register" style={{ color: 'var(--primary)', fontWeight: 600 }}>Đăng ký ngay</Link>
+                    <Link to="/register" style={{ color: 'var(--primary)', fontWeight: 700 }}>Tham gia ngay</Link>
                 </p>
-
-                {/* Demo hint */}
-                <div style={{ marginTop: '1rem', padding: '.75rem 1rem', background: 'var(--primary-light)', borderRadius: 'var(--r-sm)', fontSize: '.78rem', color: 'var(--primary)' }}>
-                    <strong>Tài khoản demo</strong> (mật khẩu: 123456)<br />
-                    🏪 <code>giangvien1</code> = Người bán &nbsp;·&nbsp; 🎒 Học viên thường
-                </div>
             </div>
         </div>
     );

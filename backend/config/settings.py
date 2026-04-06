@@ -30,12 +30,13 @@ SECRET_KEY = 'django-insecure-#@%!4*w8$nkn3ha6n%c^$*vu7524#44!ysggs)rmi+f#z#z*vx
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['192.168.190.45', '127.0.0.1', 'localhost']
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -44,6 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     # Third-party apps
+    'channels',
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
@@ -88,6 +90,14 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
+
+# Channel layers - Dùng InMemory cho dev, Redis cho production
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}
 
 
 # Database
@@ -248,3 +258,7 @@ LOGGING = {
     },
 }
 
+
+# Upload size limits for Base64 Profile Pictures (10MB)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760

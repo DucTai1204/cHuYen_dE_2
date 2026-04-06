@@ -468,6 +468,44 @@ class TinNhanViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(id_nguoi_gui=self.request.user)
 
+    @action(detail=False, methods=['post'], url_path='doc-tin-nhan')
+    def doc_tin_nhan(self, request):
+        """
+        Đánh dấu tất cả tin nhắn từ sender_id gửi cho user hiện tại là 'Đã xem'.
+        Body: { "sender_id": <int> }
+        Sau khi cập nhật DB, gửi WebSocket event 'message_seen' cho người gửi.
+        """
+        sender_id = request.data.get('sender_id')
+        if not sender_id:
+            return Response({'detail': 'Thiếu sender_id.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Chỉ đánh dấu tin nhắn từ người kia gửi CHO mình, chưa xem
+        updated_count = TinNhan.objects.filter(
+            id_nguoi_gui_id=sender_id,
+            id_nguoi_nhan=request.user,
+            da_xem=False
+        ).update(da_xem=True)
+
+        # Gửi WebSocket event để người gửi biết tin đã được xem (realtime)
+        if updated_count > 0:
+            try:
+                from channels.layers import get_channel_layer
+                from asgiref.sync import async_to_sync
+                channel_layer = get_channel_layer()
+                # Gửi tới group của người GỬI để họ thấy "Đã xem"
+                async_to_sync(channel_layer.group_send)(
+                    f'chat_{sender_id}',
+                    {
+                        'type': 'message_seen',
+                        'viewer_id': request.user.id_nguoi_dung,
+                        'sender_id': int(sender_id),
+                    }
+                )
+            except Exception as e:
+                logger.warning(f'[doc_tin_nhan] Cannot push WS event: {e}')
+
+        return Response({'da_xem': updated_count}, status=status.HTTP_200_OK)
+
 
 class DanhGiaNhaTuyenDungViewSet(viewsets.ModelViewSet):
     queryset = DanhGiaNhaTuyenDung.objects.all()

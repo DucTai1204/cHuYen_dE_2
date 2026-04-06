@@ -1,4 +1,4 @@
-# Dự Án Hệ Sinh Thái Giáo Dục (EduChain)
+# Dự Án Hệ Sinh Thái Giáo Dục (EduHKT)
 
 Dự án bao gồm Frontend (ReactJS) và Backend (Django). Để bắt đầu phát triển hoặc chạy thử dự án, vui lòng làm theo các bước sau.
 

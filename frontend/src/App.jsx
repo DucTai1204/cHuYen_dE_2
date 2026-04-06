@@ -9,7 +9,7 @@ import Register from './pages/Register';
 import VerifyCertificate from './pages/VerifyCertificate';
 
 // Student pages
-import Sidebar from './components/Sidebar';
+import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
 import ExamProctoring from './pages/ExamProctoring';
 import CourseDetail from './pages/CourseDetail';
@@ -17,10 +17,7 @@ import LessonView from './pages/LessonView';
 import CertificatesPage from './pages/CertificatesPage';
 import ProfilePage from './pages/ProfilePage';
 
-
-
 // Seller pages
-import SellerSidebar from './components/SellerSidebar';
 import SellerDashboard from './pages/seller/SellerDashboard';
 import CreateCourse from './pages/seller/CreateCourse';
 import CourseBuilder from './pages/seller/CourseBuilder';
@@ -61,26 +58,26 @@ const EmployerRoute = ({ children }) => {
     return children;
 };
 
-/* ── Student App Layout (có Sidebar) ── */
+/* ── Student App Layout (có Navbar mới) ── */
 const StudentLayout = ({ children }) => (
     <div className="app-shell">
-        <Sidebar />
+        <Navbar />
         <main className="main-content">{children}</main>
     </div>
 );
 
-/* ── Seller App Layout (có SellerSidebar) ── */
+/* ── Seller App Layout (có Navbar mới) ── */
 const SellerLayout = ({ children }) => (
     <div className="app-shell">
-        <SellerSidebar />
+        <Navbar />
         <main className="main-content">{children}</main>
     </div>
 );
 
-/* ── Employer App Layout (Tạm thời dùng SellerSidebar hoặc Sidebar tương tự) ── */
+/* ── Employer App Layout (có Navbar mới) ── */
 const EmployerLayout = ({ children }) => (
     <div className="app-shell">
-        <Sidebar role="recruiter" />
+        <Navbar />
         <main className="main-content">{children}</main>
     </div>
 );
@@ -95,11 +92,22 @@ const HomeRedirect = () => {
     return <Navigate to="/dashboard" replace />;
 };
 
+/* ── Auth profile wrapper for layouts ── */
+const AuthProfileLayout = () => {
+    const { user } = useAuth();
+    if (user?.vai_tro === 'GiangVien') return <SellerLayout><ProfilePage /></SellerLayout>;
+    if (user?.vai_tro === 'NhaTuyenDung') return <EmployerLayout><ProfilePage /></EmployerLayout>;
+    return <StudentLayout><ProfilePage /></StudentLayout>;
+};
+
+import { ChatProvider } from './context/ChatContext';
+
 function App() {
     return (
         <AuthProvider>
-            <Router>
-                <Routes>
+            <ChatProvider>
+                <Router>
+                    <Routes>
                     {/* Landing */}
                     <Route path="/" element={<HomeRedirect />} />
 
@@ -121,8 +129,11 @@ function App() {
                     <Route path="/certificates" element={
                         <PrivateRoute><StudentLayout><CertificatesPage /></StudentLayout></PrivateRoute>
                     } />
+                    {/* Layout-agnostic Profile Route */}
                     <Route path="/profile" element={
-                        <PrivateRoute><StudentLayout><ProfilePage /></StudentLayout></PrivateRoute>
+                        <PrivateRoute>
+                            <AuthProfileLayout />
+                        </PrivateRoute>
                     } />
 
 
@@ -177,7 +188,8 @@ function App() {
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </Router>
-        </AuthProvider>
+        </ChatProvider>
+    </AuthProvider>
     );
 }
 

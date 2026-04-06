@@ -532,33 +532,45 @@ const CourseDetail = () => {
                     </div>
 
                     {/* RECRUITER REVIEWS SECTION */}
-                    <div className="card" style={{ border: '2px solid #10b981', background: '#f0fdf4' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                            <h3 style={{ fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '.4rem', color: '#065f46' }}>
-                                <MI name="verified" style={{ fontSize: '1.2rem', color: '#059669' }} /> Góc nhìn từ Nhà tuyển dụng
+                    <div className="card" style={{ border: '1px solid #dcfce7', background: 'linear-gradient(to bottom, #f0fdf4, #fff)', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                            <h3 style={{ fontWeight: 800, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '.6rem', color: '#065f46' }}>
+                                <MI name="verified" style={{ fontSize: '1.4rem', color: '#059669' }} /> Góc nhìn từ Nhà tuyển dụng
                             </h3>
-                            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#059669' }}>
-                                {Number(course.trung_binh_sao_ntd || 0).toFixed(1)} <span style={{ color: '#059669' }}>★</span>
+                            <div style={{ background: '#d1fae5', color: '#065f46', padding: '.4rem .8rem', borderRadius: '12px', fontSize: '1rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '.3rem' }}>
+                                {Number(course.trung_binh_sao_ntd || 0).toFixed(1)} <Stars n={1} />
                             </div>
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                             {ntdReviews.length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '1.5rem', color: '#64748b', fontSize: '.85rem', fontStyle: 'italic' }}>Chưa có đánh giá chuyên môn nào từ doanh nghiệp.</div>
+                                <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b', fontSize: '.9rem', fontStyle: 'italic', background: 'rgba(255,255,255,0.5)', borderRadius: '12px', border: '1px dashed #ced4da' }}>
+                                    Tham gia đánh giá để giúp học viên hiểu rõ giá trị thực tế của khóa học này.
+                                </div>
                             ) : (
                                 ntdReviews.map(r => (
-                                    <div key={r.id_danh_gia} style={{ borderBottom: '1px solid #d1fae5', paddingBottom: '1rem' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '.3rem' }}>
-                                            <div style={{ fontWeight: 700, fontSize: '.875rem', color: '#065f46', display: 'flex', alignItems: 'center', gap: '.3rem' }}>
-                                                <MI name="business" style={{ fontSize: '1rem' }} /> {r.ten_nha_tuyen_dung}
+                                    <div key={r.id_danh_gia} style={{ background: '#fff', border: '1px solid #eef2f7', borderRadius: '14px', padding: '1.25rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
+                                                <div style={{ width: 40, height: 40, borderRadius: '10px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                                    {r.hinh_anh_logo ? (
+                                                        <img src={r.hinh_anh_logo} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    ) : (
+                                                        <MI name="business" style={{ color: '#64748b', fontSize: '1.2rem' }} />
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontWeight: 800, fontSize: '.9rem', color: '#065f46' }}>{r.ten_nha_tuyen_dung || r.ten_dang_nhap}</div>
+                                                    <div style={{ fontSize: '.7rem', color: '#64748b' }}>Doanh nghiệp đối tác</div>
+                                                </div>
                                             </div>
-                                            <div style={{ fontSize: '.75rem', color: '#64748b' }}>{new Date(r.ngay_tao).toLocaleDateString('vi-VN')}</div>
+                                            <div style={{ fontSize: '.75rem', color: '#94a3b8' }}>{new Date(r.ngay_tao).toLocaleDateString('vi-VN')}</div>
                                         </div>
-                                        <div style={{ marginBottom: '.4rem', color: '#059669' }}>
-                                            {'★'.repeat(r.so_sao_phu_hop)}{'☆'.repeat(5 - r.so_sao_phu_hop)}
-                                        </div>
-                                        <p style={{ fontSize: '.85rem', color: '#1e293b', lineHeight: 1.5, fontStyle: 'italic', fontWeight: 500 }}>
-                                            "{r.nhan_xet_chuyen_mon}"
+                                        <div style={{ marginBottom: '.75rem' }}><Stars n={r.so_sao_phu_hop} /></div>
+                                        <p style={{ fontSize: '.9rem', color: '#334155', lineHeight: 1.6, fontStyle: 'italic', position: 'relative', paddingLeft: '1.5rem' }}>
+                                            <span style={{ position: 'absolute', left: 0, top: -5, fontSize: '2rem', color: '#cbd5e1', fontFamily: 'serif' }}>“</span>
+                                            {r.nhan_xet_chuyen_mon}
+                                            <span style={{ fontSize: '2rem', color: '#cbd5e1', lineHeight: 0, fontFamily: 'serif', verticalAlign: 'sub' }}>”</span>
                                         </p>
                                     </div>
                                 ))
@@ -567,12 +579,32 @@ const CourseDetail = () => {
                     </div>
 
                     {/* Recognized by */}
-                    <div className="card">
-                        <h3 style={{ fontWeight: 700, marginBottom: '.75rem', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '.4rem' }}><MI name="business" style={{ fontSize: '1.1rem', color: 'var(--primary)' }} /> Được công nhận bởi</h3>
+                    <div className="card" style={{ background: '#f8fafc' }}>
+                        <h3 style={{ fontWeight: 800, marginBottom: '1rem', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '.5rem', color: '#334155' }}>
+                            <MI name="verified_user" style={{ fontSize: '1.2rem', color: 'var(--primary)' }} /> Được chứng thực bởi
+                        </h3>
                         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                            {['FPT Software', 'VNG Corporation', 'Viettel Digital'].map(c => (
-                                <div key={c} style={{ padding: '.5rem 1rem', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '.82rem', fontWeight: 500, color: 'var(--text-secondary)' }}>{c}</div>
-                            ))}
+                            {course.employer_endorsements && course.employer_endorsements.length > 0 ? (
+                                course.employer_endorsements.map((emp, i) => (
+                                    <div key={i} style={{ 
+                                        display: 'flex', alignItems: 'center', gap: '.5rem', padding: '.6rem 1rem', 
+                                        background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                                    }}>
+                                        {emp.hinh_anh_logo ? (
+                                            <img src={emp.hinh_anh_logo} alt="logo" style={{ width: 24, height: 24, objectFit: 'cover', borderRadius: '4px' }} />
+                                        ) : (
+                                            <MI name="business" style={{ fontSize: '1rem', color: '#94a3b8' }} />
+                                        )}
+                                        <span style={{ fontSize: '.85rem', fontWeight: 700, color: '#475569' }}>{emp.ten_nha_tuyen_dung}</span>
+                                    </div>
+                                ))
+                            ) : (
+                                <>
+                                    <div style={{ padding: '.6rem 1rem', border: '1px solid #e2e8f0', borderRadius: '12px', fontSize: '.82rem', fontWeight: 600, color: '#94a3b8', background: '#fff', opacity: 0.7 }}>FPT Software (Hạng A)</div>
+                                    <div style={{ padding: '.6rem 1rem', border: '1px solid #e2e8f0', borderRadius: '12px', fontSize: '.82rem', fontWeight: 600, color: '#94a3b8', background: '#fff', opacity: 0.7 }}>VNG Corp</div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
