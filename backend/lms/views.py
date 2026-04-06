@@ -8,14 +8,15 @@ from rest_framework.response import Response
 from .models import (
     KhoaHoc, BaiGiang, DangKyHoc, Chuong, 
     TienDoBaiGiang, DanhGiaKhoaHoc, TinNhan, DanhGiaNhaTuyenDung,
-    TuyenDung
+    TuyenDung, CauHoi, LuaChon, KetQuaQuiz
 )
 from .serializers import (
     KhoaHocSerializer, KhoaHocListSerializer,
     BaiGiangSerializer, DangKyHocSerializer, ChuongSerializer,
     TienDoBaiGiangSerializer, DanhGiaKhoaHocSerializer, 
     TinNhanSerializer, DanhGiaNhaTuyenDungSerializer,
-    TuyenDungSerializer
+    TuyenDungSerializer, CauHoiSerializer, LuaChonSerializer,
+    KetQuaQuizSerializer
 )
 from core.permissions import IsGiangVien
 from certificates.services import cap_chung_chi_tu_dong
@@ -210,6 +211,88 @@ class BaiGiangViewSet(viewsets.ModelViewSet):
         ctx['completed_ids'] = completed_ids
         return ctx
 
+    @action(detail=True, methods=['post'], url_path='nop-bai')
+    def nop_bai(self, request, pk=None):
+        """
+        Gửi bài làm của sinh viên cho Quiz.
+        Body: { "answers": { "cau_hoi_id": lua_chon_id, ... } }
+        Logic: Tính điểm, lưu KetQuaQuiz, và nếu đạt yêu cầu (VD: >50% điểm) -> Đánh dấu hoàn thành bài học.
+        """
+        bai_giang = self.get_object()
+        if bai_giang.loai_bai != 'Quiz':
+            return Response({'detail': 'Bài học này không phải là bài kiểm tra.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        answers = request.data.get('answers', {}) # { id_cau_hoi: id_lua_chon }
+        
+        # Tìm đăng ký học của người dùng cho khóa học chứa quiz này
+        try:
+            dang_ky = DangKyHoc.objects.get(id_nguoi_dung=request.user, id_khoa_hoc=bai_giang.id_khoa_hoc)
+        except DangKyHoc.DoesNotExist:
+            return Response({'detail': 'Bạn chưa đăng ký khóa học này.'}, status=status.HTTP_404_NOT_FOUND)
+        
+        questions = bai_giang.cau_hoi_set.all()
+        total_questions = questions.count()
+        if total_questions == 0:
+            return Response({'detail': 'Bài kiểm tra này chưa có câu hỏi.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        score = 0
+        total_score = 0
+        
+        results_detail = []
+        
+        for q in questions:
+            total_score += q.diem
+            user_choice_id = answers.get(str(q.id_cau_hoi)) or answers.get(q.id_cau_hoi)
+            
+            correct_choice = q.lua_chon_set.filter(la_dap_an_dung=True).first()
+            is_correct = False
+            if user_choice_id and correct_choice and int(user_choice_id) == correct_choice.id_lua_chon:
+                score += q.diem
+                is_correct = True
+            
+            results_detail.append({
+                'id_cau_hoi': q.id_cau_hoi,
+                'is_correct': is_correct,
+                'correct_choice_id': correct_choice.id_lua_chon if correct_choice else None
+            })
+            
+        pass_threshold = total_score * 0.8 # Mặc định 80% là đạt (để khắt khe hơn)
+        is_passed = score >= pass_threshold
+        
+        # Lưu kết quả
+        KetQuaQuiz.objects.create(
+            id_dang_ky=dang_ky,
+            id_bai_giang=bai_giang,
+            diem_so=score,
+            tong_diem=total_score,
+            da_dat=is_passed
+        )
+        
+        # Nếu đạt, đánh dấu hoàn thành bài học luôn
+        if is_passed:
+            tien_do, _ = TienDoBaiGiang.objects.get_or_create(id_dang_ky=dang_ky, id_bai_giang=bai_giang)
+            if not tien_do.da_hoan_thanh:
+                tien_do.da_hoan_thanh = True
+                tien_do.ngay_hoan_thanh = timezone.now()
+                tien_do.save()
+                
+                # Tính lại % tổng
+                tong_bai = BaiGiang.objects.filter(id_khoa_hoc=dang_ky.id_khoa_hoc).count()
+                da_xong = TienDoBaiGiang.objects.filter(id_dang_ky=dang_ky, da_hoan_thanh=True).count()
+                phan_tram = round(da_xong / tong_bai * 100, 1) if tong_bai > 0 else 0.0
+                dang_ky.phan_tram_hoan_thanh = phan_tram
+                if phan_tram >= 100:
+                    dang_ky.trang_thai_hoc = 'DaXong'
+                    cap_chung_chi_tu_dong(dang_ky)
+                dang_ky.save()
+
+        return Response({
+            'diem_so': score,
+            'tong_diem': total_score,
+            'da_dat': is_passed,
+            'results_detail': results_detail
+        })
+
 
 class DangKyHocViewSet(viewsets.ModelViewSet):
     queryset = DangKyHoc.objects.all()
@@ -303,6 +386,7 @@ class DangKyHocViewSet(viewsets.ModelViewSet):
                 'ho_va_ten': u.ho_va_ten or u.username,
                 'username': u.username,
                 'email': u.email,
+                'hinh_anh_logo': getattr(u, 'hinh_anh_logo', ''),
                 'bio': getattr(u, 'bio', ''),
                 'ky_nang': getattr(u, 'ky_nang', ''),
                 'ready_to_work': getattr(u, 'ready_to_work', True),
@@ -571,3 +655,42 @@ class TuyenDungViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Chỉ Nhà tuyển dụng mới có quyền thực hiện hành động này.")
         serializer.save(id_nha_tuyen_dung=self.request.user)
+
+
+class CauHoiViewSet(viewsets.ModelViewSet):
+    queryset = CauHoi.objects.all()
+    serializer_class = CauHoiSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [permissions.IsAuthenticated(), IsGiangVien()]
+        return [permissions.IsAuthenticated()]
+
+    def get_queryset(self):
+        # Lọc theo bài giảng nếu có query param
+        bai_giang_id = self.request.query_params.get('bai_giang')
+        if bai_giang_id:
+            return self.queryset.filter(id_bai_giang=bai_giang_id).order_by('thu_tu')
+        return self.queryset.all()
+
+
+class LuaChonViewSet(viewsets.ModelViewSet):
+    queryset = LuaChon.objects.all()
+    serializer_class = LuaChonSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [permissions.IsAuthenticated(), IsGiangVien()]
+        return [permissions.IsAuthenticated()]
+
+
+class KetQuaQuizViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = KetQuaQuiz.objects.all()
+    serializer_class = KetQuaQuizSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Học viên chỉ xem kết quả của mình
+        return self.queryset.filter(id_dang_ky__id_nguoi_dung=self.request.user).order_by('-ngay_lam')

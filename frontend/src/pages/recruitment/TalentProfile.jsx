@@ -80,8 +80,12 @@ const TalentProfile = () => {
                 {/* Left Side: Profile Info */}
                 <div>
                     <div style={{ background: '#fff', padding: '2rem', borderRadius: '15px', border: '1px solid var(--border)', textAlign: 'center', boxShadow: 'var(--shadow-sm)', marginBottom: '1.5rem' }}>
-                        <div style={{ width: 100, height: 100, background: '#1e3a8a', color: '#fff', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem', fontWeight: 800, marginBottom: '1rem' }}>
-                            {talent.ho_va_ten[0]}
+                        <div style={{ width: 100, height: 100, background: '#1e3a8a', color: '#fff', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem', fontWeight: 800, marginBottom: '1rem', overflow: 'hidden' }}>
+                            {talent.hinh_anh_logo ? (
+                                <img src={talent.hinh_anh_logo} alt={talent.ho_va_ten} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                                talent.ho_va_ten[0]
+                            )}
                         </div>
                         <h2 style={{ fontSize: '1.4rem', fontWeight: 800 }}>{talent.ho_va_ten}</h2>
                         <p style={{ color: 'var(--text-muted)', fontSize: '.9rem', marginBottom: '1.5rem' }}>@{talent.username}</p>

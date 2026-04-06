@@ -253,7 +253,7 @@ const CareerList = ({ data, loading, onRefresh }) => {
                             <MI name="business" style={{ fontSize: '1.8rem' }} />
                         </div>
                         <div>
-                            <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{h.ten_nha_tuyen_dung}</div>
+                            <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{h.ho_va_ten_ntd || h.ten_nha_tuyen_dung}</div>
                             <div style={{ fontSize: '.85rem', color: 'var(--text-secondary)' }}>
                                 Đã gửi lời mời dựa trên: <strong style={{ color: '#2563eb' }}>{h.ten_khoa_hoc}</strong>
                             </div>

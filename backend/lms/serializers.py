@@ -3,7 +3,7 @@ from .models import (
     KhoaHoc, Chuong, BaiGiang, DangKyHoc,
     TienDoBaiGiang, DanhGiaKhoaHoc, TinNhan,
     KyNang, KyNangKhoaHoc, DanhGiaNhaTuyenDung,
-    TuyenDung
+    TuyenDung, CauHoi, LuaChon, KetQuaQuiz
 )
 from certificates.serializers import ChungChiSoSerializer
 
@@ -15,9 +15,32 @@ class KyNangSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class LuaChonSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LuaChon
+        fields = ['id_lua_chon', 'id_cau_hoi', 'noi_dung', 'la_dap_an_dung']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        # Ẩn đáp án đúng nếu là học viên đang học
+        if request and getattr(request.user, 'vai_tro', '') == 'HocVien':
+             data.pop('la_dap_an_dung', None)
+        return data
+
+
+class CauHoiSerializer(serializers.ModelSerializer):
+    lua_chon = LuaChonSerializer(source='lua_chon_set', many=True, read_only=True)
+
+    class Meta:
+        model = CauHoi
+        fields = ['id_cau_hoi', 'id_bai_giang', 'noi_dung', 'diem', 'thu_tu', 'lua_chon']
+
+
 class BaiGiangSerializer(serializers.ModelSerializer):
     """Serializer cho bài giảng — có thêm trường is_locked (chỉ đọc, tính từ context)."""
     is_locked = serializers.SerializerMethodField()
+    cau_hoi = CauHoiSerializer(source='cau_hoi_set', many=True, read_only=True)
 
     class Meta:
         model = BaiGiang
@@ -25,7 +48,7 @@ class BaiGiangSerializer(serializers.ModelSerializer):
             'id_bai_giang', 'id_khoa_hoc', 'id_chuong',
             'ten_bai_giang', 'noi_dung_url', 'loai_bai',
             'thoi_luong_phut', 'thu_tu', 'la_xem_truoc',
-            'video_watch_percentage', 'is_locked',
+            'video_watch_percentage', 'is_locked', 'cau_hoi'
         ]
 
     def get_is_locked(self, obj):
@@ -236,10 +259,26 @@ class DanhGiaNhaTuyenDungSerializer(serializers.ModelSerializer):
 
 class TuyenDungSerializer(serializers.ModelSerializer):
     ten_hoc_vien = serializers.CharField(source='id_hoc_vien.username', read_only=True)
+    ho_va_ten_hoc_vien = serializers.CharField(source='id_hoc_vien.ho_va_ten', read_only=True)
+    hinh_anh_hoc_vien = serializers.CharField(source='id_hoc_vien.hinh_anh_logo', read_only=True)
     ten_nha_tuyen_dung = serializers.CharField(source='id_nha_tuyen_dung.username', read_only=True)
+    ho_va_ten_ntd = serializers.CharField(source='id_nha_tuyen_dung.ho_va_ten', read_only=True)
+    hinh_anh_ntd = serializers.CharField(source='id_nha_tuyen_dung.hinh_anh_logo', read_only=True)
     ten_khoa_hoc = serializers.CharField(source='id_khoa_hoc.ten_khoa_hoc', read_only=True)
 
     class Meta:
         model = TuyenDung
-        fields = ['id_tuyen_dung', 'id_nha_tuyen_dung', 'ten_nha_tuyen_dung', 'id_hoc_vien', 'ten_hoc_vien', 'id_khoa_hoc', 'ten_khoa_hoc', 'ngay_tuyen', 'ghi_chu', 'trang_thai']
+        fields = [
+            'id_tuyen_dung', 'id_nha_tuyen_dung', 'ten_nha_tuyen_dung', 'ho_va_ten_ntd', 'hinh_anh_ntd',
+            'id_hoc_vien', 'ten_hoc_vien', 'ho_va_ten_hoc_vien', 'hinh_anh_hoc_vien',
+            'id_khoa_hoc', 'ten_khoa_hoc', 'ngay_tuyen', 'ghi_chu', 'trang_thai'
+        ]
         read_only_fields = ['id_nha_tuyen_dung', 'ngay_tuyen']
+
+
+class KetQuaQuizSerializer(serializers.ModelSerializer):
+    ten_bai_giang = serializers.CharField(source='id_bai_giang.ten_bai_giang', read_only=True)
+
+    class Meta:
+        model = KetQuaQuiz
+        fields = '__all__'

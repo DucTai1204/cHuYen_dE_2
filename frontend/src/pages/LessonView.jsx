@@ -237,25 +237,58 @@ const TextViewer = ({ lesson, onComplete }) => {
 ════════════════════════════════════════════════════ */
 const QuizViewer = ({ lesson, onComplete }) => {
     const [answers, setAnswers] = useState({});
-    const [submitted, setSubmitted] = useState(false);
+    const [result, setResult] = useState(null);
+    const [submitting, setSubmitting] = useState(false);
 
-    // Mock câu hỏi — trong thực tế lấy từ API bài giảng
-    const mockQuestions = [
-        { id: 1, q: 'Câu hỏi kiểm tra 1 — Bạn đã hiểu nội dung bài chưa?', opts: ['Rồi', 'Chưa', 'Cần xem lại', 'Sẽ xem lại sau'] },
-        { id: 2, q: 'Câu hỏi 2 — Bài học này giúp ích cho bạn như thế nào?', opts: ['Rất hữu ích', 'Hữu ích', 'Bình thường', 'Chưa hữu ích'] },
-    ];
-    const allAnswered = mockQuestions.every(q => answers[q.id] !== undefined);
+    const questions = lesson.cau_hoi || [];
+    const allAnswered = questions.length > 0 && questions.every(q => answers[q.id_cau_hoi] !== undefined);
 
-    const handleSubmit = () => {
-        setSubmitted(true);
-        onComplete();
+    const handleSubmit = async () => {
+        setSubmitting(true);
+        try {
+            const res = await api.post(`/lms/bai-giang/${lesson.id_bai_giang}/nop-bai/`, {
+                answers: answers
+            });
+            setResult(res.data);
+            if (res.data.da_dat) {
+                onComplete();
+            }
+        } catch (err) {
+            alert(err.response?.data?.detail || 'Lỗi khi nộp bài');
+        } finally {
+            setSubmitting(false);
+        }
     };
 
-    if (submitted) return (
-        <div style={{ textAlign: 'center', padding: '4rem 2rem', background: '#f0fdf4', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎉</div>
-            <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#065f46' }}>Nộp bài thành công!</div>
-            <div style={{ color: '#059669', fontSize: '.875rem', marginTop: '.5rem' }}>Bài kiểm tra đã được ghi nhận.</div>
+    if (result) return (
+        <div style={{ textAlign: 'center', padding: '2rem', background: result.da_dat ? '#f0fdf4' : '#fef2f2', borderRadius: '12px', border: `1px solid ${result.da_dat ? '#bbf7d0' : '#fecaca'}` }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{result.da_dat ? '🎉' : '⚠️'}</div>
+            <div style={{ fontWeight: 700, fontSize: '1.25rem', color: result.da_dat ? '#065f46' : '#991b1b' }}>
+                {result.da_dat ? 'CHÚC MỪNG! BẠN ĐÃ ĐẠT' : 'CHƯA ĐẠT YÊU CẦU'}
+            </div>
+            <div style={{ fontSize: '2rem', fontWeight: 800, margin: '1rem 0', color: 'var(--text-primary)' }}>
+                {result.diem_so} / {result.tong_diem}
+            </div>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+                {result.da_dat 
+                    ? 'Bạn đã hoàn thành tốt bài kiểm tra và đủ điều kiện để tiếp tục bài học tiếp theo.' 
+                    : 'Rất tiếc, bạn cần đạt ít nhất 80% số điểm để hoàn thành bài này. Hãy xem lại kiến thức và thử lại!'}
+            </p>
+            {!result.da_dat && (
+                <button 
+                    onClick={() => { setResult(null); setAnswers({}); }}
+                    style={{ padding: '.6rem 1.5rem', background: 'var(--text-primary)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+                >
+                    Làm lại bài tập
+                </button>
+            )}
+        </div>
+    );
+
+    if (questions.length === 0) return (
+        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+            <span className="material-icons" style={{ fontSize: '3rem', marginBottom: '1rem' }}>info</span>
+            <p>Bài kiểm tra này hiện chưa có câu hỏi.</p>
         </div>
     );
 
@@ -266,22 +299,22 @@ const QuizViewer = ({ lesson, onComplete }) => {
                     <span className="material-icons">assignment</span> {lesson.ten_bai_giang}
                 </div>
                 <div style={{ fontSize: '.85rem', opacity: .85, marginTop: '.4rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <span className="material-icons" style={{ fontSize: '1rem' }}>help_outline</span> {mockQuestions.length} câu hỏi · Làm hết để hoàn thành
+                    <span className="material-icons" style={{ fontSize: '1rem' }}>help_outline</span> {questions.length} câu hỏi · Đạt 80% để hoàn thành
                 </div>
             </div>
-            {mockQuestions.map((q, qi) => (
-                <div key={q.id} className="card" style={{ marginBottom: '1rem' }}>
-                    <p style={{ fontWeight: 600, marginBottom: '1rem' }}>Câu {qi + 1}: {q.q}</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
-                        {q.opts.map((opt, oi) => {
-                            const sel = answers[q.id] === oi;
+            {questions.map((q, qi) => (
+                <div key={q.id_cau_hoi} className="card" style={{ marginBottom: '1.25rem', boxShadow: 'var(--shadow-sm)' }}>
+                    <p style={{ fontWeight: 700, marginBottom: '1rem', fontSize: '1rem' }}>Câu {qi + 1}: {q.noi_dung}</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '.65rem' }}>
+                        {(q.lua_chon || []).map((opt) => {
+                            const sel = answers[q.id_cau_hoi] === opt.id_lua_chon;
                             return (
-                                <label key={oi} style={{ display: 'flex', alignItems: 'center', gap: '.75rem', padding: '.65rem 1rem', borderRadius: '8px', cursor: 'pointer', border: `1px solid ${sel ? '#3b82f6' : 'var(--border)'}`, background: sel ? '#eff6ff' : '#fff', transition: 'all .15s' }}>
-                                    <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${sel ? '#3b82f6' : '#cbd5e1'}`, background: sel ? '#3b82f6' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                        {sel && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
+                                <label key={opt.id_lua_chon} style={{ display: 'flex', alignItems: 'center', gap: '.75rem', padding: '.8rem 1rem', borderRadius: '10px', cursor: 'pointer', border: `2px solid ${sel ? '#3b82f6' : 'var(--border)'}`, background: sel ? '#eff6ff' : '#fff', transition: 'all .2s' }}>
+                                    <div style={{ width: 20, height: 20, borderRadius: '50%', border: `2px solid ${sel ? '#3b82f6' : '#cbd5e1'}`, background: sel ? '#3b82f6' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                        {sel && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />}
                                     </div>
-                                    <input type="radio" name={`q${q.id}`} style={{ display: 'none' }} onChange={() => setAnswers(a => ({ ...a, [q.id]: oi }))} />
-                                    <span style={{ fontSize: '.875rem' }}>{opt}</span>
+                                    <input type="radio" name={`q${q.id_cau_hoi}`} style={{ display: 'none' }} onChange={() => setAnswers(a => ({ ...a, [q.id_cau_hoi]: opt.id_lua_chon }))} />
+                                    <span style={{ fontSize: '.9rem', fontWeight: sel ? 600 : 400 }}>{opt.noi_dung}</span>
                                 </label>
                             );
                         })}
@@ -290,10 +323,10 @@ const QuizViewer = ({ lesson, onComplete }) => {
             ))}
             <button
                 onClick={handleSubmit}
-                disabled={!allAnswered}
-                style={{ width: '100%', padding: '.875rem', background: allAnswered ? '#2563eb' : '#94a3b8', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: allAnswered ? 'pointer' : 'not-allowed', fontSize: '1rem', transition: 'all .2s' }}
+                disabled={!allAnswered || submitting}
+                style={{ width: '100%', padding: '1rem', background: allAnswered ? '#2563eb' : '#94a3b8', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: allAnswered ? 'pointer' : 'not-allowed', fontSize: '1.1rem', transition: 'all .2s', boxShadow: allAnswered ? '0 10px 20px rgba(37,99,235,0.2)' : 'none' }}
             >
-                {allAnswered ? '✅ Nộp bài và hoàn thành' : `Vui lòng trả lời đủ ${mockQuestions.length} câu`}
+                {submitting ? 'ĐANG NỘP BÀI...' : allAnswered ? '✅ Nộp bài ngay' : `Vui lòng trả lời đủ ${questions.length} câu`}
             </button>
         </div>
     );

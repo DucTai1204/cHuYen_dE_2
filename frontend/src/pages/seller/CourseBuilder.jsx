@@ -139,6 +139,187 @@ const ChapterBlock = ({ chapter, selectedLesson, onSelectLesson, onDeleteLesson,
     );
 };
 
+/* ── Quiz Editor ── */
+const QuizEditor = ({ lesson, onUpdate }) => {
+    const [questions, setQuestions] = useState(lesson.cau_hoi || []);
+    const [loading, setLoading] = useState(false);
+
+    // Đồng bộ khi lesson thay đổi
+    useEffect(() => { setQuestions(lesson.cau_hoi || []); }, [lesson.id_bai_giang]);
+
+    const addQuestion = async () => {
+        try {
+            const res = await api.post('/lms/cau-hoi/', {
+                id_bai_giang: lesson.id_bai_giang,
+                noi_dung: 'Tên câu hỏi mới?',
+                diem: 1,
+                thu_tu: questions.length + 1
+            });
+            const newQs = [...questions, { ...res.data, lua_chon: [] }];
+            setQuestions(newQs);
+            onUpdate(newQs);
+        } catch (e) { alert('Lỗi thêm câu hỏi'); }
+    };
+
+    const deleteQuestion = async (qId) => {
+        if (!window.confirm('Xóa câu hỏi này?')) return;
+        try {
+            await api.delete(`/lms/cau-hoi/${qId}/`);
+            const newQs = questions.filter(q => q.id_cau_hoi !== qId);
+            setQuestions(newQs);
+            onUpdate(newQs);
+        } catch (e) { alert('Lỗi xóa câu hỏi'); }
+    };
+
+    const updateQuestion = async (qId, data) => {
+        try {
+            const res = await api.patch(`/lms/cau-hoi/${qId}/`, data);
+            const newQs = questions.map(q => q.id_cau_hoi === qId ? { ...q, ...res.data } : q);
+            setQuestions(newQs);
+            onUpdate(newQs);
+        } catch (e) { }
+    };
+
+    const addChoice = async (qId) => {
+        try {
+            const res = await api.post('/lms/lua-chon/', {
+                id_cau_hoi: qId,
+                noi_dung: 'Lựa chọn mới',
+                la_dap_an_dung: false
+            });
+            const newQs = questions.map(q => {
+                if (q.id_cau_hoi === qId) {
+                    return { ...q, lua_chon: [...(q.lua_chon || []), res.data] };
+                }
+                return q;
+            });
+            setQuestions(newQs);
+            onUpdate(newQs);
+        } catch (e) { }
+    };
+
+    const deleteChoice = async (qId, cId) => {
+        try {
+            await api.delete(`/lms/lua-chon/${cId}/`);
+            const newQs = questions.map(q => {
+                if (q.id_cau_hoi === qId) {
+                    return { ...q, lua_chon: q.lua_chon.filter(c => c.id_lua_chon !== cId) };
+                }
+                return q;
+            });
+            setQuestions(newQs);
+            onUpdate(newQs);
+        } catch (e) { }
+    };
+
+    const setCorrectChoice = async (qId, cId) => {
+        // Một câu hỏi chỉ có 1 đáp án đúng (tạm thời)
+        const q = questions.find(x => x.id_cau_hoi === qId);
+        if (!q) return;
+
+        try {
+            // Backend update cho tất cả các choices của câu hỏi này
+            // Nhưng để đơn giản, ta lặp qua update từng cái hoặc check logic
+            // Ở đây ta đơn giản là patch cái được chọn thành true, những cái khác thành false
+            await Promise.all(q.lua_chon.map(c => {
+                return api.patch(`/lms/lua-chon/${c.id_lua_chon}/`, { la_dap_an_dung: c.id_lua_chon === cId });
+            }));
+
+            const newQs = questions.map(x => {
+                if (x.id_cau_hoi === qId) {
+                    return {
+                        ...x,
+                        lua_chon: x.lua_chon.map(c => ({ ...c, la_dap_an_dung: c.id_lua_chon === cId }))
+                    };
+                }
+                return x;
+            });
+            setQuestions(newQs);
+            onUpdate(newQs);
+        } catch (e) { }
+    };
+
+    const updateChoiceContent = async (qId, cId, text) => {
+        try {
+            await api.patch(`/lms/lua-chon/${cId}/`, { noi_dung: text });
+            const newQs = questions.map(q => {
+                if (q.id_cau_hoi === qId) {
+                    return { ...q, lua_chon: q.lua_chon.map(c => c.id_lua_chon === cId ? { ...c, noi_dung: text } : c) };
+                }
+                return q;
+            });
+            setQuestions(newQs);
+            onUpdate(newQs);
+        } catch (e) { }
+    }
+
+    return (
+        <div style={{ marginTop: '1rem', borderTop: '1px dashed var(--border)', paddingTop: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '.75rem' }}>
+                <h4 style={{ fontSize: '.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '.3rem' }}>
+                    <MI name="quiz" style={{ color: SELLER_ORANGE }} /> Danh sách câu hỏi ({questions.length})
+                </h4>
+                <button onClick={addQuestion} style={{ padding: '.3rem .6rem', background: SELLER_ORANGE_LIGHT, color: SELLER_ORANGE_DARK, border: `1px solid ${SELLER_ORANGE}`, borderRadius: '6px', fontSize: '.7rem', fontWeight: 700, cursor: 'pointer' }}>
+                    + Thêm câu hỏi
+                </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {questions.map((q, idx) => (
+                    <div key={q.id_cau_hoi} style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '10px', padding: '.75rem' }}>
+                        <div style={{ display: 'flex', gap: '.5rem', marginBottom: '.5rem' }}>
+                            <span style={{ fontSize: '.8rem', fontWeight: 700, color: 'var(--text-muted)', paddingTop: '.4rem' }}>#{idx+1}</span>
+                            <div style={{flex: 1}}>
+                                <textarea 
+                                    className="form-input" 
+                                    rows={2} 
+                                    value={q.noi_dung} 
+                                    onChange={e => updateQuestion(q.id_cau_hoi, { noi_dung: e.target.value })}
+                                    style={{ fontSize: '.82rem', padding: '.4rem', marginBottom: '.4rem' }}
+                                    placeholder="Nội dung câu hỏi..."
+                                />
+                                <div style={{display: 'flex', gap: '1rem', alignItems: 'center'}}>
+                                    <div style={{fontSize: '.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '.2rem'}}>
+                                        Điểm: <input type="number" value={q.diem} onChange={e => updateQuestion(q.id_cau_hoi, {diem: parseInt(e.target.value)||0})} style={{width: 40, border: '1px solid var(--border)', borderRadius: '4px', textAlign: 'center', fontSize: '.75rem'}} />
+                                    </div>
+                                    <button onClick={() => deleteQuestion(q.id_cau_hoi)} style={{marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--danger)', fontSize: '.7rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '.1rem'}}>
+                                        <MI name="delete" style={{fontSize: '.9rem'}} /> Xóa câu hỏi
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Choices list */}
+                        <div style={{ paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
+                            {(q.lua_chon || []).map((c, cidx) => (
+                                <div key={c.id_lua_chon} style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                                    <input 
+                                        type="radio" 
+                                        name={`q-${q.id_cau_hoi}`} 
+                                        checked={c.la_dap_an_dung} 
+                                        onChange={() => setCorrectChoice(q.id_cau_hoi, c.id_lua_chon)}
+                                        style={{ accentColor: '#10b981', cursor: 'pointer' }}
+                                    />
+                                    <input 
+                                        className="form-input"
+                                        value={c.noi_dung}
+                                        onChange={e => updateChoiceContent(q.id_cau_hoi, c.id_lua_chon, e.target.value)}
+                                        style={{ fontSize: '.78rem', padding: '.3rem .5rem', flex: 1 }}
+                                        placeholder="Nội dung lựa chọn..."
+                                    />
+                                    <button onClick={() => deleteChoice(q.id_cau_hoi, c.id_lua_chon)} style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer' }}>✕</button>
+                                </div>
+                            ))}
+                            <button onClick={() => addChoice(q.id_cau_hoi)} style={{ alignSelf: 'flex-start', background: 'none', border: 'none', color: SELLER_ORANGE, fontSize: '.75rem', fontWeight: 600, cursor: 'pointer', marginTop: '.2rem' }}>+ Thêm phương án</button>
+                        </div>
+                    </div>
+                ))}
+                {questions.length === 0 && <div style={{textAlign: 'center', color: 'var(--text-muted)', fontSize: '.75rem', padding: '1rem', background: '#fff', borderRadius: '8px', border: '1px dashed var(--border)'}}>Chưa có câu hỏi nào.</div>}
+            </div>
+        </div>
+    );
+};
+
 /* ── Lesson Editor Panel ── */
 const LessonEditor = ({ lesson, onSave, onClose }) => {
     const [form, setForm] = useState({ ...lesson });
@@ -167,7 +348,7 @@ const LessonEditor = ({ lesson, onSave, onClose }) => {
                 <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '1.1rem' }}>✕</button>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', paddingRight: '.5rem' }}>
                 {/* Tên bài */}
                 <div className="form-group" style={{ marginBottom: 0 }}>
                     <label className="form-label">Tên bài giảng *</label>
@@ -222,8 +403,13 @@ const LessonEditor = ({ lesson, onSave, onClose }) => {
                     </div>
                 )}
 
+                {/* Quiz Editor */}
+                {form.loai_bai === 'Quiz' && (
+                    <QuizEditor lesson={form} onUpdate={(newQs) => set('cau_hoi', newQs)} />
+                )}
+
                 {/* Thời lượng & Thứ tự */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                         <label className="form-label">Thời lượng (phút)</label>
                         <input type="number" className="form-input" value={form.thoi_luong_phut || 0} onChange={e => set('thoi_luong_phut', parseInt(e.target.value) || 0)} min={0} />

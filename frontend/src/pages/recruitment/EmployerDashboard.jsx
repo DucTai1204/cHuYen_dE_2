@@ -79,8 +79,12 @@ const TalentCard = ({ talent, onReviewClick }) => {
             display: 'flex', flexDirection: 'column', gap: '1rem'
         }}>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                <div style={{ width: 48, height: 48, background: EMP_BLUE_LIGHT, color: EMP_BLUE, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
-                    {talent.ho_va_ten?.charAt(0).toUpperCase()}
+                <div style={{ width: 48, height: 48, background: EMP_BLUE_LIGHT, color: EMP_BLUE, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, overflow: 'hidden' }}>
+                    {talent.hinh_anh_logo ? (
+                        <img src={talent.hinh_anh_logo} alt={talent.ho_va_ten} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                        talent.ho_va_ten?.charAt(0).toUpperCase()
+                    )}
                 </div>
                 <div>
                     <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '.95rem' }}>{talent.ho_va_ten}</div>
@@ -152,23 +156,50 @@ const HiredList = () => {
             {hired.map(h => (
                 <div key={h.id_tuyen_dung} style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '15px', padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: 'var(--shadow-sm)' }}>
                     <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
-                        <div style={{ width: 50, height: 50, background: EMP_BLUE, color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.2rem' }}>
-                            {h.ten_hoc_vien?.[0]}
+                        <div style={{ width: 50, height: 50, background: EMP_BLUE, color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.2rem', overflow: 'hidden' }}>
+                            {h.hinh_anh_hoc_vien ? (
+                                <img src={h.hinh_anh_hoc_vien} alt={h.ho_va_ten_hoc_vien} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                                (h.ho_va_ten_hoc_vien || h.ten_hoc_vien)?.[0]
+                            )}
                         </div>
                         <div>
-                            <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{h.ten_hoc_vien}</div>
+                            <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{h.ho_va_ten_hoc_vien || h.ten_hoc_vien}</div>
                             <div style={{ fontSize: '.85rem', color: 'var(--text-secondary)', marginTop: '.2rem' }}>
                                 Chứng chỉ căn cứ: <strong style={{ color: EMP_BLUE }}>{h.ten_khoa_hoc}</strong>
                             </div>
                         </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '.8rem', color: 'var(--text-muted)', marginBottom: '.4rem' }}>
-                            <MI name="event" style={{ fontSize: '0.9rem', verticalAlign: 'middle' }} /> {new Date(h.ngay_tuyen).toLocaleDateString('vi-VN')}
+                        <div style={{ fontSize: '.8rem', color: 'var(--text-muted)', marginBottom: '.6rem', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '.3rem' }}>
+                            <MI name="event" style={{ fontSize: '1rem', color: EMP_BLUE }} /> {new Date(h.ngay_tuyen).toLocaleDateString('vi-VN')}
                         </div>
-                        <span style={{ background: '#ecfdf5', color: '#059669', padding: '.3rem .75rem', borderRadius: '99px', fontSize: '.75rem', fontWeight: 700, border: '1px solid #d1fae5' }}>
-                            ĐÃ TUYỂN DỤNG
-                        </span>
+                        {h.trang_thai === 'ChoXacNhan' ? (
+                            <span style={{ 
+                                background: '#fffbeb', color: '#b45309', padding: '.4rem .9rem', 
+                                borderRadius: '8px', fontSize: '.72rem', fontWeight: 800, 
+                                border: '1px solid #fef3c7', display: 'inline-flex', alignItems: 'center', gap: '.4rem' 
+                            }}>
+                                <span style={{ width: 8, height: 8, background: '#f59e0b', borderRadius: '50%', animation: 'pulse 2s infinite' }}></span>
+                                CHỜ XÁC NHẬN
+                            </span>
+                        ) : h.trang_thai === 'DaDongY' ? (
+                            <span style={{ 
+                                background: '#ecfdf5', color: '#059669', padding: '.4rem .9rem', 
+                                borderRadius: '8px', fontSize: '.72rem', fontWeight: 800, 
+                                border: '1px solid #d1fae5', display: 'inline-flex', alignItems: 'center', gap: '.4rem' 
+                            }}>
+                                <MI name="check_circle" style={{ fontSize: '1rem' }} /> ĐÃ TUYỂN DỤNG
+                            </span>
+                        ) : (
+                            <span style={{ 
+                                background: '#fef2f2', color: '#b91c1c', padding: '.4rem .9rem', 
+                                borderRadius: '8px', fontSize: '.72rem', fontWeight: 800, 
+                                border: '1px solid #fee2e2', display: 'inline-flex', alignItems: 'center', gap: '.4rem' 
+                            }}>
+                                <MI name="cancel" style={{ fontSize: '1rem' }} /> ĐÃ TỪ CHỐI
+                            </span>
+                        )}
                     </div>
                 </div>
             ))}

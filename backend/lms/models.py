@@ -208,6 +208,43 @@ class TienDoBaiGiang(models.Model):
         unique_together = ('id_dang_ky', 'id_bai_giang')
 
 
+class CauHoi(models.Model):
+    id_cau_hoi = models.AutoField(primary_key=True)
+    id_bai_giang = models.ForeignKey(BaiGiang, on_delete=models.CASCADE, related_name='cau_hoi_set')
+    noi_dung = models.TextField()
+    diem = models.FloatField(default=1.0)
+    thu_tu = models.IntegerField(default=1)
+
+    class Meta:
+        ordering = ['thu_tu']
+
+    def __str__(self):
+        return f"Câu hỏi {self.thu_tu} - {self.id_bai_giang.ten_bai_giang}"
+
+
+class LuaChon(models.Model):
+    id_lua_chon = models.AutoField(primary_key=True)
+    id_cau_hoi = models.ForeignKey(CauHoi, on_delete=models.CASCADE, related_name='lua_chon_set')
+    noi_dung = models.TextField()
+    la_dap_an_dung = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Lựa chọn cho {self.id_cau_hoi.id_cau_hoi}"
+
+
+class KetQuaQuiz(models.Model):
+    id_ket_qua = models.AutoField(primary_key=True)
+    id_dang_ky = models.ForeignKey(DangKyHoc, on_delete=models.CASCADE, related_name='ket_qua_quiz')
+    id_bai_giang = models.ForeignKey(BaiGiang, on_delete=models.CASCADE)
+    diem_so = models.FloatField()
+    tong_diem = models.FloatField()
+    da_dat = models.BooleanField(default=False)
+    ngay_lam = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.id_dang_ky.id_nguoi_dung.username} - {self.id_bai_giang.ten_bai_giang}: {self.diem_so}/{self.tong_diem}"
+
+
 # ==============================================================================
 # LOGIC TỰ ĐỘNG CẬP NHẬT THỐNG KÊ (DJANGO SIGNALS)
 # ==============================================================================
