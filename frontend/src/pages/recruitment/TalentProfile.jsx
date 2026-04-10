@@ -14,6 +14,10 @@ const TalentProfile = () => {
     const [recallHoverId, setRecallHoverId] = useState(null);
     const [message, setMessage] = useState('');
     const [certs, setCerts] = useState([]);
+    const [activeCourse, setActiveCourse] = useState(null); // Full course data with syllabus
+    const [courseHistory, setCourseHistory] = useState([]);
+    const [loadingHistory, setLoadingHistory] = useState(true);
+    const [loadingSyllabus, setLoadingSyllabus] = useState(true);
     const messagesEndRef = useRef(null);
 
     useEffect(() => {
@@ -26,11 +30,27 @@ const TalentProfile = () => {
                 });
         }
 
+        // Fetch Course Syllabus for the active course
+        if (talent?.id_khoa_hoc) {
+            setLoadingSyllabus(true);
+            api.get(`/lms/khoa-hoc/${talent.id_khoa_hoc}/`)
+                .then(res => setActiveCourse(res.data))
+                .catch(err => console.error('Lỗi tải giáo trình:', err))
+                .finally(() => setLoadingSyllabus(false));
+        }
+
+        // Fetch Course History (All finished courses)
+        setLoadingHistory(true);
+        api.get(`/lms/dang-ky-hoc/talent-courses/${id}/`)
+            .then(res => setCourseHistory(res.data || []))
+            .catch(err => console.error('Lỗi tải lịch sử học tập:', err))
+            .finally(() => setLoadingHistory(false));
+
         // Fetch Certificates
         api.get(`/certificates/chung-chi-so/?id_user=${id}`)
             .then(res => setCerts(res.data || []))
             .catch(err => console.error('Lỗi tải chứng chỉ:', err));
-    }, [id]);
+    }, [id, talent?.id_khoa_hoc]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -117,7 +137,7 @@ const TalentProfile = () => {
                     </div>
 
                     {/* CERTIFICATES LIST SECTION */}
-                    <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                    <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', marginBottom: '1.5rem' }}>
                         <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
                             <MI name="workspace_premium" style={{ color: '#f59e0b' }} /> Chứng chỉ & Bằng cấp ({certs.length})
                         </h3>
@@ -143,102 +163,196 @@ const TalentProfile = () => {
                             </div>
                         )}
                     </div>
-                </div>
 
-                {/* Right Side: Chat Interface */}
-                <div style={{ background: '#fff', borderRadius: '15px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', height: '600px', boxShadow: 'var(--shadow-sm)' }}>
-                    {/* Chat Header */}
-                    <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '.75rem', flexShrink: 0 }}>
-                        <div style={{ width: 32, height: 32, background: '#e2e8f0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.9rem', fontWeight: 700 }}>{talent.ho_va_ten[0]}</div>
-                        <span style={{ fontWeight: 700 }}>Trò chuyện với {talent.ho_va_ten}</span>
-                    </div>
+                    {/* COURSE HISTORY SECTION */}
+                    <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                            <MI name="history" style={{ color: '#1e3a8a' }} /> Các khóa học đã học ({courseHistory.length})
+                        </h3>
 
-                    {/* Chat Messages */}
-                    <div style={{ flex: 1, padding: '1.25rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', background: '#f8fafc' }}>
-                        {chatHistory.length === 0 ? (
-                            <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '2rem', fontSize: '.85rem' }}>Chưa có tin nhắn nào. Hãy gửi tin tuyển dụng ngay!</div>
+                        {loadingHistory ? (
+                            <div style={{ fontSize: '.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>Đang tải lịch sử...</div>
+                        ) : courseHistory.length === 0 ? (
+                            <p style={{ fontSize: '.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>Chưa có lịch sử học tập khác.</p>
                         ) : (
-                            chatHistory.map((m, idx) => {
-                                const isMe = m.id_nguoi_nhan === parseInt(id);
-                                return (
-                                    <div
-                                        key={idx}
-                                        onMouseEnter={() => setRecallHoverId(m.id_tin_nhan)}
-                                        onMouseLeave={() => setRecallHoverId(null)}
-                                        style={{
-                                            alignSelf: isMe ? 'flex-end' : 'flex-start',
-                                            maxWidth: '80%',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            alignItems: isMe ? 'flex-end' : 'flex-start',
-                                            position: 'relative'
-                                        }}
-                                    >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexDirection: isMe ? 'row' : 'row-reverse' }}>
-                                            {isMe && !m.is_recalled && (
-                                                <button
-                                                    onClick={() => handleRecall(m.id_tin_nhan)}
-                                                    style={{
-                                                        background: 'none',
-                                                        border: 'none',
-                                                        padding: 0,
-                                                        cursor: 'pointer',
-                                                        color: '#94a3b8',
-                                                        opacity: recallHoverId === m.id_tin_nhan ? 1 : 0,
-                                                        transition: 'var(--t)',
-                                                        display: 'flex',
-                                                        alignItems: 'center'
-                                                    }}
-                                                    title="Thu hồi tin nhắn"
-                                                >
-                                                    <MI name="settings_backup_restore" style={{ fontSize: '1rem' }} />
-                                                </button>
-                                            )}
-                                            <div style={{
-                                                padding: '.75rem 1rem',
-                                                borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                                                background: m.is_recalled ? '#f1f5f9' : (isMe ? '#1e3a8a' : '#fff'),
-                                                color: m.is_recalled ? '#94a3b8' : (isMe ? '#fff' : 'var(--text-primary)'),
-                                                boxShadow: m.is_recalled ? 'none' : '0 1px 2px rgba(0,0,0,.05)',
-                                                border: m.is_recalled ? '1px dashed #cbd5e1' : (isMe ? 'none' : '1px solid #e2e8f0'),
-                                                fontSize: '.9rem',
-                                                fontStyle: m.is_recalled ? 'italic' : 'normal'
-                                            }}>
-                                                {m.is_recalled ? 'Tin nhắn đã được thu hồi' : m.noi_dung}
-                                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '.75rem' }}>
+                                {courseHistory.map((h, i) => (
+                                    <div key={i} style={{ display: 'flex', gap: '.75rem', alignItems: 'center' }}>
+                                        <div style={{ width: 40, height: 40, borderRadius: '8px', background: '#f1f5f9', overflow: 'hidden', flexShrink: 0 }}>
+                                            {h.hinh_anh_thumbnail ? <img src={h.hinh_anh_thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <MI name="school" style={{ color: '#cbd5e1', margin: '10px' }} />}
                                         </div>
-                                        <div style={{ fontSize: '.65rem', opacity: .7, marginTop: '.25rem', textAlign: 'right' }}>
-                                            {new Date(m.ngay_gui).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: '.85rem', fontWeight: 700 }}>{h.ten_khoa_hoc}</div>
+                                            <div style={{ fontSize: '.7rem', color: 'var(--text-muted)' }}>Xong ngày: {new Date(h.ngay_hoan_thanh).toLocaleDateString('vi-VN')}</div>
                                         </div>
                                     </div>
-                                );
-                            })
-                        )}
-                        {isTyping && (
-                            <div style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '.5rem', fontSize: '.75rem', color: 'var(--text-muted)' }}>
-                                <div style={{ display: 'flex', gap: '2px' }}>
-                                    <span style={{ width: 4, height: 4, background: '#cbd5e1', borderRadius: '50%', animation: 'blink 1.4s infinite' }}></span>
-                                    <span style={{ width: 4, height: 4, background: '#cbd5e1', borderRadius: '50%', animation: 'blink 1.4s infinite .2s' }}></span>
-                                    <span style={{ width: 4, height: 4, background: '#cbd5e1', borderRadius: '50%', animation: 'blink 1.4s infinite .4s' }}></span>
-                                </div>
-                                <span>{talent.ho_va_ten} đang soạn tin...</span>
+                                ))}
                             </div>
                         )}
-                        <div ref={messagesEndRef} />
+                    </div>
+                </div>
+
+                {/* Right Side: Syllabus & Chat */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    {/* SKILLS ACHIEVED */}
+                    <div style={{ background: '#fff', padding: '1.75rem', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '.5rem', color: '#1e3a8a' }}>
+                            <MI name="stars" style={{ color: '#f59e0b' }} /> Kỹ năng thực tế đạt được từ khóa học
+                        </h3>
+                        <p style={{ fontSize: '.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>Dựa trên giáo trình của khóa học <strong>{talent.ten_khoa_hoc}</strong>, học viên đã được trang bị các kiến thức và khả năng thực hành sau:</p>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                            {talent.ky_nang_khoa_hoc && talent.ky_nang_khoa_hoc.length > 0 ? (
+                                talent.ky_nang_khoa_hoc.map((kn, i) => (
+                                    <div key={i} style={{ padding: '1rem', background: '#f0f9ff', borderRadius: '12px', border: '1px solid #e0f2fe', display: 'flex', gap: '.75rem' }}>
+                                        <MI name="check_circle" style={{ color: '#0369a1', marginTop: '.2rem' }} />
+                                        <div>
+                                            <div style={{ fontWeight: 800, fontSize: '.9rem', color: '#0369a1' }}>{kn.ten_ky_nang}</div>
+                                            <div style={{ fontSize: '.78rem', color: '#075985', marginTop: '.25rem', lineHeight: 1.4 }}>{kn.mo_ta || 'Thực hành thành thạo các kỹ năng chuyên môn trong dự án thực tế.'}</div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '10px', color: 'var(--text-muted)', fontSize: '.85rem', fontStyle: 'italic', gridColumn: '1/-1' }}>
+                                    Giảng viên chưa liệt kê chi tiết các kỹ năng thực tế cho đầu ra khóa học này.
+                                </div>
+                            )}
+                        </div>
                     </div>
 
-                    {/* Chat Input */}
-                    <form onSubmit={handleSendMessage} style={{ padding: '1rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '.75rem', flexShrink: 0 }}>
-                        <input
-                            value={message}
-                            onChange={handleInputChange}
-                            placeholder="Nhập nội dung tin nhắn tuyển dụng..."
-                            style={{ flex: 1, padding: '.75rem', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none' }}
-                        />
-                        <button type="submit" style={{ width: 45, height: 45, background: '#1e3a8a', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <MI name="send" />
-                        </button>
-                    </form>
+                    {/* COURSE SYLLABUS / CURRICULUM */}
+                    <div style={{ background: '#fff', padding: '1.75rem', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '.5rem', color: '#1e3a8a' }}>
+                            <MI name="menu_book" style={{ color: '#1e3a8a' }} /> Giáo trình khóa học (Chi tiết nội dung đã học)
+                        </h3>
+                        
+                        {loadingSyllabus ? (
+                            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Đang tải giáo trình...</div>
+                        ) : activeCourse?.chuong_set?.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
+                                {activeCourse.chuong_set.map((ch, i) => (
+                                    <details key={i} style={{ border: '1px solid #f1f5f9', borderRadius: '10px', background: '#f8fafc', overflow: 'hidden' }}>
+                                        <summary style={{ padding: '1rem', fontWeight: 700, fontSize: '.9rem', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#475569' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                                                <MI name="folder" style={{ color: '#d97706' }} /> {ch.ten_chuong}
+                                            </div>
+                                            <span style={{ fontSize: '.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>{ch.bai_giang?.length || 0} bài học</span>
+                                        </summary>
+                                        <div style={{ padding: '0 1rem 1rem 2.5rem', display: 'flex', flexDirection: 'column', gap: '.6rem', background: '#fff' }}>
+                                            {ch.bai_giang?.map((l, li) => (
+                                                <div key={li} style={{ fontSize: '.82rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                                                    <MI name={l.loai_bai === 'Video' ? 'play_circle' : (l.loai_bai === 'Quiz' ? 'quiz' : 'description')} style={{ fontSize: '1rem', opacity: .5 }} />
+                                                    {l.ten_bai_giang}
+                                                    {l.thoi_luong_phut > 0 && <span style={{ marginLeft: 'auto', fontSize: '.7rem', opacity: .6 }}>{l.thoi_luong_phut} phút</span>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </details>
+                                ))}
+                            </div>
+                        ) : (
+                            <div style={{ background: '#f8fafc', padding: '2rem', borderRadius: '10px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                <MI name="info" style={{ fontSize: '2rem', display: 'block', margin: '0 auto .5rem', opacity: .3 }} />
+                                Khóa học này chưa cập nhật nội dung giáo trình.
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Chat Interface */}
+                    <div style={{ background: '#fff', borderRadius: '15px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', height: '500px', boxShadow: 'var(--shadow-sm)' }}>
+                        {/* Chat Header */}
+                        <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '.75rem', flexShrink: 0 }}>
+                            <div style={{ width: 32, height: 32, background: '#e2e8f0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.9rem', fontWeight: 700 }}>{talent.ho_va_ten[0]}</div>
+                            <span style={{ fontWeight: 700 }}>Để lại lời nhắn cho {talent.ho_va_ten}</span>
+                        </div>
+
+                        {/* Chat Messages */}
+                        <div style={{ flex: 1, padding: '1.25rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', background: '#f8fafc' }}>
+                            {chatHistory.length === 0 ? (
+                                <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '2rem', fontSize: '.85rem' }}>Hãy gửi tin nhắn đầu tiên để bắt đầu quá trình tuyển dụng.</div>
+                            ) : (
+                                chatHistory.map((m, idx) => {
+                                    const isMe = m.id_nguoi_nhan === parseInt(id);
+                                    return (
+                                        <div
+                                            key={idx}
+                                            onMouseEnter={() => setRecallHoverId(m.id_tin_nhan)}
+                                            onMouseLeave={() => setRecallHoverId(null)}
+                                            style={{
+                                                alignSelf: isMe ? 'flex-end' : 'flex-start',
+                                                maxWidth: '80%',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: isMe ? 'flex-end' : 'flex-start',
+                                                position: 'relative'
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexDirection: isMe ? 'row' : 'row-reverse' }}>
+                                                {isMe && !m.is_recalled && (
+                                                    <button
+                                                        onClick={() => handleRecall(m.id_tin_nhan)}
+                                                        style={{
+                                                            background: 'none',
+                                                            border: 'none',
+                                                            padding: 0,
+                                                            cursor: 'pointer',
+                                                            color: '#94a3b8',
+                                                            opacity: recallHoverId === m.id_tin_nhan ? 1 : 0,
+                                                            transition: 'var(--t)',
+                                                            display: 'flex',
+                                                            alignItems: 'center'
+                                                        }}
+                                                        title="Thu hồi tin nhắn"
+                                                    >
+                                                        <MI name="settings_backup_restore" style={{ fontSize: '1rem' }} />
+                                                    </button>
+                                                )}
+                                                <div style={{
+                                                    padding: '.75rem 1rem',
+                                                    borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                                                    background: m.is_recalled ? '#f1f5f9' : (isMe ? '#1e3a8a' : '#fff'),
+                                                    color: m.is_recalled ? '#94a3b8' : (isMe ? '#fff' : 'var(--text-primary)'),
+                                                    boxShadow: m.is_recalled ? 'none' : '0 1px 2px rgba(0,0,0,.05)',
+                                                    border: m.is_recalled ? '1px dashed #cbd5e1' : (isMe ? 'none' : '1px solid #e2e8f0'),
+                                                    fontSize: '.9rem',
+                                                    fontStyle: m.is_recalled ? 'italic' : 'normal'
+                                                }}>
+                                                    {m.is_recalled ? 'Tin nhắn đã được thu hồi' : m.noi_dung}
+                                                </div>
+                                            </div>
+                                            <div style={{ fontSize: '.65rem', opacity: .7, marginTop: '.25rem', textAlign: 'right' }}>
+                                                {new Date(m.ngay_gui).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                            {isTyping && (
+                                <div style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '.5rem', fontSize: '.75rem', color: 'var(--text-muted)' }}>
+                                    <div style={{ display: 'flex', gap: '2px' }}>
+                                        <span style={{ width: 4, height: 4, background: '#cbd5e1', borderRadius: '50%', animation: 'blink 1.4s infinite' }}></span>
+                                        <span style={{ width: 4, height: 4, background: '#cbd5e1', borderRadius: '50%', animation: 'blink 1.4s infinite .2s' }}></span>
+                                        <span style={{ width: 4, height: 4, background: '#cbd5e1', borderRadius: '50%', animation: 'blink 1.4s infinite .4s' }}></span>
+                                    </div>
+                                    <span>{talent.ho_va_ten} đang soạn tin...</span>
+                                </div>
+                            )}
+                            <div ref={messagesEndRef} />
+                        </div>
+
+                        {/* Chat Input */}
+                        <form onSubmit={handleSendMessage} style={{ padding: '1rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '.75rem', flexShrink: 0 }}>
+                            <input
+                                value={message}
+                                onChange={handleInputChange}
+                                placeholder="Nhập nội dung tin nhắn tuyển dụng..."
+                                style={{ flex: 1, padding: '.75rem', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none' }}
+                            />
+                            <button type="submit" style={{ width: 45, height: 45, background: '#1e3a8a', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <MI name="send" />
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>

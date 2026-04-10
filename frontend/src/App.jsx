@@ -29,6 +29,9 @@ import SellerSettings from './pages/seller/SellerSettings';
 // Recruitment pages
 import EmployerDashboard from './pages/recruitment/EmployerDashboard';
 import TalentProfile from './pages/recruitment/TalentProfile';
+import TalentSearch from './pages/recruitment/TalentSearch';
+import CourseCatalog from './pages/recruitment/CourseCatalog';
+import HiringManagement from './pages/recruitment/HiringManagement';
 
 // Shared pages
 import MessagesPage from './pages/MessagesPage';
@@ -177,8 +180,17 @@ function App() {
                     <Route path="/employer/dashboard" element={
                         <EmployerRoute><EmployerLayout><EmployerDashboard /></EmployerLayout></EmployerRoute>
                     } />
+                    <Route path="/employer/courses" element={
+                        <EmployerRoute><EmployerLayout><CourseCatalog /></EmployerLayout></EmployerRoute>
+                    } />
+                    <Route path="/employer/talents" element={
+                        <EmployerRoute><EmployerLayout><TalentSearch /></EmployerLayout></EmployerRoute>
+                    } />
                     <Route path="/employer/talents/:id" element={
                         <EmployerRoute><EmployerLayout><TalentProfile /></EmployerLayout></EmployerRoute>
+                    } />
+                    <Route path="/employer/jobs" element={
+                        <EmployerRoute><EmployerLayout><HiringManagement /></EmployerLayout></EmployerRoute>
                     } />
                     <Route path="/employer/messages" element={
                         <EmployerRoute><EmployerLayout><MessagesPage /></EmployerLayout></EmployerRoute>

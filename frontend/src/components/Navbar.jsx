@@ -43,13 +43,13 @@ const Navbar = () => {
         ],
         GiangVien: [
             { icon: 'bar_chart', label: 'Tổng quan', path: '/seller/dashboard' },
-            { icon: 'menu_book', label: 'Khóa học', path: '/seller/courses' },
-            { icon: 'payments', label: 'Doanh thu', path: '/seller/revenue' },
             { icon: 'groups', label: 'Học viên', path: '/seller/students' },
             { icon: 'star_rate', label: 'Đánh giá', path: '/seller/reviews' },
         ],
         NhaTuyenDung: [
-            { icon: 'groups', label: 'Nhân tài', path: '/employer/dashboard' },
+            { icon: 'dashboard', label: 'Tổng quan', path: '/employer/dashboard' },
+            { icon: 'groups', label: 'Nhân tài', path: '/employer/talents' },
+            { icon: 'menu_book', label: 'Khóa học', path: '/employer/courses' },
             { icon: 'work', label: 'Tuyển dụng', path: '/employer/jobs' },
             { icon: 'chat', label: 'Tin nhắn', path: '/employer/messages' },
         ],

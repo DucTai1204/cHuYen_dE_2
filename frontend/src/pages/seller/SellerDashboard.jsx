@@ -1,128 +1,301 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 
 const MI = ({ name, style }) => <span className="material-icons" style={{ fontSize: '1.2rem', ...style }}>{name}</span>;
 
-const SELLER_ORANGE = '#d97706';
-const SELLER_ORANGE_LIGHT = '#fef3c7';
-const SELLER_ORANGE_DARK = '#92400e';
+const ORANGE = '#d97706';
+const ORANGE_LIGHT = '#fef3c7';
+const ORANGE_DARK = '#92400e';
+const PAGE_SIZE = 10;
 
-/* ── Status Badge ── */
+// Màu cho Pie Chart (mảng tự nhiên, không AI)
+const PIE_COLORS = ['#d97706','#b45309','#92400e','#78716c','#a8a29e','#57534e','#f59e0b','#ca8a04','#854d0e','#713f12'];
+
+/* ─────────── SVG PIE CHART ─────────── */
+const PieChart = ({ data, size = 240, hoveredIdx, onHover }) => {
+    const total = data.reduce((s, d) => s + d.value, 0);
+    if (total === 0) return <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Không có dữ liệu</div>;
+
+    // Ngưỡng: nếu quá nhiều slice hoặc slice quá nhỏ thì ẩn label trong slice
+    const showLabel = data.length <= 7;
+    const POPUP = 14; // số px "nhấc lên" khi hover
+
+    let cumulative = 0;
+    const cx = size / 2, cy = size / 2, r = size / 2 - 12;
+
+    const slices = data.map((d, i) => {
+        const pct = d.value / total;
+        const startAngle = cumulative * 2 * Math.PI - Math.PI / 2;
+        cumulative += pct;
+        const endAngle = cumulative * 2 * Math.PI - Math.PI / 2;
+        const midAngle = (startAngle + endAngle) / 2;
+
+        const x1 = cx + r * Math.cos(startAngle);
+        const y1 = cy + r * Math.sin(startAngle);
+        const x2 = cx + r * Math.cos(endAngle);
+        const y2 = cy + r * Math.sin(endAngle);
+        const largeArc = pct > 0.5 ? 1 : 0;
+
+        // Vị trí label: 65% rán từ tâm hướng ra midAngle
+        const labelR = r * 0.62;
+        const lx = cx + labelR * Math.cos(midAngle);
+        const ly = cy + labelR * Math.sin(midAngle);
+
+        // Hướng translate khi hover
+        const dx = POPUP * Math.cos(midAngle);
+        const dy = POPUP * Math.sin(midAngle);
+
+        return {
+            path: `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`,
+            color: PIE_COLORS[i % PIE_COLORS.length],
+            pct,
+            pctLabel: (pct * 100).toFixed(pct < 0.05 ? 0 : 1),
+            label: d.label,
+            lx, ly, dx, dy,
+            showPctLabel: showLabel && pct >= 0.05, // Ẩn nếu slice nhỏ hơn 5%
+        };
+    });
+
+    return (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: 'visible' }}>
+            {slices.map((s, i) => {
+                const isHovered = hoveredIdx === i;
+                return (
+                    <g key={i}
+                        onMouseEnter={() => onHover && onHover(i)}
+                        onMouseLeave={() => onHover && onHover(null)}
+                        style={{ cursor: 'pointer' }}
+                    >
+                        {/* Static Hit Area (Vùng nhận sự kiện tĩnh - không di chuyển) */}
+                        <path d={s.path} fill="transparent" />
+
+                        {/* Moving Visual Part (Phần hiển thị - có chuyển động) */}
+                        <g 
+                            transform={isHovered ? `translate(${s.dx}, ${s.dy})` : 'translate(0,0)'}
+                            style={{ transition: 'transform .25s cubic-bezier(0.34, 1.56, 0.64, 1)', pointerEvents: 'none' }}
+                        >
+                            <path d={s.path} fill={s.color} stroke="#fff" strokeWidth={isHovered ? 3 : 1.5} />
+                            {s.showPctLabel && (
+                                <text
+                                    x={s.lx} y={s.ly}
+                                    textAnchor="middle" dominantBaseline="middle"
+                                    fill="#fff"
+                                    fontSize={s.pct > 0.12 ? 11 : 9}
+                                    fontWeight={700}
+                                    style={{ userSelect: 'none' }}
+                                >
+                                    {s.pctLabel}%
+                                </text>
+                            )}
+                        </g>
+                        <title>{s.label}: {(s.pct * 100).toFixed(1)}%</title>
+                    </g>
+                );
+            })}
+        </svg>
+    );
+};
+
+/* ─────────── REVENUE MODAL ─────────── */
+const RevenueModal = ({ courses, onClose }) => {
+    const [tab, setTab] = useState('pie');
+    const [hoveredIdx, setHoveredIdx] = useState(null);
+    const published = courses.filter(c => c.cong_khai);
+    const totalRevenue = published.reduce((s, c) => s + (c.gia_tien || 0) * (c.tong_hoc_vien || 0), 0);
+    const fmtVnd = (n) => n >= 1e6 ? `${(n / 1e6).toFixed(1)}tr₫` : `${(n / 1000).toFixed(0)}k₫`;
+
+    const pieData = published.map(c => ({
+        label: c.ten_khoa_hoc,
+        value: (c.gia_tien || 0) * (c.tong_hoc_vien || 0),
+    })).filter(d => d.value > 0).sort((a, b) => b.value - a.value);
+
+    // Tab 2: Ranking
+    const ranked = [...published]
+        .map(c => ({ ...c, rev: (c.gia_tien || 0) * (c.tong_hoc_vien || 0) }))
+        .sort((a, b) => b.rev - a.rev);
+
+    // Tab 3: Conversion rate (học viên vs doanh thu)
+    const maxStudents = Math.max(...published.map(c => c.tong_hoc_vien || 0), 1);
+
+    const TABS = [
+        { id: 'pie', icon: 'pie_chart', label: 'Phân bổ' },
+        { id: 'rank', icon: 'leaderboard', label: 'Xếp hạng' },
+        { id: 'convert', icon: 'people_alt', label: 'Học viên' },
+    ];
+
+    return (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}
+            onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+        >
+            <div className="fade-up" style={{ background: '#fff', borderRadius: 'var(--r-xl)', width: '100%', maxWidth: 720, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border)' }}>
+                {/* Modal Header */}
+                <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                        <h2 style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--secondary)' }}>Chi tiết Doanh thu</h2>
+                        <p style={{ fontSize: '.75rem', color: 'var(--text-muted)', marginTop: '.1rem' }}>{published.length} khóa học đang bán · Tổng {fmtVnd(totalRevenue)}</p>
+                    </div>
+                    <button onClick={onClose} style={{ background: '#f1f5f9', border: 'none', borderRadius: '8px', padding: '.4rem', cursor: 'pointer', display: 'flex' }}>
+                        <MI name="close" style={{ fontSize: '1.1rem', color: '#64748b' }} />
+                    </button>
+                </div>
+
+                {/* Tabs */}
+                <div style={{ display: 'flex', gap: '.25rem', padding: '.75rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                    {TABS.map(t => (
+                        <button key={t.id} onClick={() => setTab(t.id)} style={{
+                            display: 'flex', alignItems: 'center', gap: '.4rem',
+                            padding: '.4rem .9rem', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                            background: tab === t.id ? ORANGE_LIGHT : 'transparent',
+                            color: tab === t.id ? ORANGE_DARK : 'var(--text-secondary)',
+                            fontWeight: tab === t.id ? 700 : 500, fontSize: '.82rem', transition: 'all .15s',
+                        }}>
+                            <MI name={t.icon} style={{ fontSize: '1rem' }} />{t.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Tab Content */}
+                <div style={{ overflowY: 'auto', flex: 1, padding: '1.5rem' }}>
+
+                    {/* ── TAB 1: PIE CHART ── */}
+                    {tab === 'pie' && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '2rem', alignItems: 'center' }}>
+                            <PieChart data={pieData} size={240} hoveredIdx={hoveredIdx} onHover={setHoveredIdx} />
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', maxHeight: 280, overflowY: 'auto', paddingRight: '.25rem' }}>
+                                {pieData.map((d, i) => {
+                                    const pct = totalRevenue > 0 ? ((d.value / totalRevenue) * 100).toFixed(1) : 0;
+                                    return (
+                                        <div key={i}
+                                            onMouseEnter={() => setHoveredIdx(i)}
+                                            onMouseLeave={() => setHoveredIdx(null)}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '.65rem', padding: '.4rem .5rem', borderRadius: '7px', background: hoveredIdx === i ? '#fffbeb' : 'transparent', border: hoveredIdx === i ? `1px solid #fcd34d` : '1px solid transparent', transition: 'all .15s', cursor: 'default' }}
+                                        >
+                                            <div style={{ width: 10, height: 10, borderRadius: '3px', flexShrink: 0, background: PIE_COLORS[i % PIE_COLORS.length] }} />
+                                            <span style={{ flex: 1, fontSize: '.78rem', fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.label}</span>
+                                            <span style={{ fontSize: '.75rem', fontWeight: 700, color: ORANGE, flexShrink: 0 }}>{pct}%</span>
+                                            <span style={{ fontSize: '.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>{fmtVnd(d.value)}</span>
+                                        </div>
+                                    );
+                                })}
+                                {pieData.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '.85rem' }}>Chưa có doanh thu từ khóa nào.</p>}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── TAB 2: RANKING TABLE ── */}
+                    {tab === 'rank' && (
+                        <div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 80px 80px 80px', gap: '.75rem', padding: '.5rem .75rem', background: '#f8fafc', borderRadius: '8px', marginBottom: '.75rem', fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                                <span>#</span>
+                                <span>Khóa học</span>
+                                <span style={{ textAlign: 'right' }}>HV</span>
+                                <span style={{ textAlign: 'right' }}>Giá</span>
+                                <span style={{ textAlign: 'right' }}>Doanh thu</span>
+                            </div>
+                            {ranked.map((c, i) => {
+                                const medals = ['🥇', '🥈', '🥉'];
+                                return (
+                                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '28px 1fr 80px 80px 80px', gap: '.75rem', padding: '.6rem .75rem', borderBottom: '1px solid #f1f5f9', alignItems: 'center' }}
+                                        onMouseEnter={e => e.currentTarget.style.background = '#fffbeb'}
+                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                    >
+                                        <span style={{ fontSize: '.9rem' }}>{medals[i] || <span style={{ color: 'var(--text-muted)', fontSize: '.78rem' }}>{i + 1}</span>}</span>
+                                        <span style={{ fontSize: '.83rem', fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.ten_khoa_hoc}</span>
+                                        <span style={{ fontSize: '.82rem', textAlign: 'right', color: '#2563eb', fontWeight: 600 }}>{c.tong_hoc_vien || 0}</span>
+                                        <span style={{ fontSize: '.78rem', textAlign: 'right', color: 'var(--text-muted)' }}>{Number(c.gia_tien || 0).toLocaleString('vi-VN')}₫</span>
+                                        <span style={{ fontSize: '.82rem', textAlign: 'right', fontWeight: 700, color: c.rev > 0 ? '#059669' : 'var(--text-muted)' }}>{c.rev > 0 ? fmtVnd(c.rev) : '—'}</span>
+                                    </div>
+                                );
+                            })}
+                            {ranked.length === 0 && <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>Chưa có khóa học đang bán</p>}
+                        </div>
+                    )}
+
+                    {/* ── TAB 3: HỌC VIÊN CONVERSION ── */}
+                    {tab === 'convert' && (
+                        <div>
+                            <p style={{ fontSize: '.82rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>So sánh số lượng học viên giữa các khóa học. Khóa đông học viên nhất = 100%.</p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                {[...published].sort((a, b) => (b.tong_hoc_vien || 0) - (a.tong_hoc_vien || 0)).map((c, i) => {
+                                    const pct = ((c.tong_hoc_vien || 0) / maxStudents) * 100;
+                                    const rev = (c.gia_tien || 0) * (c.tong_hoc_vien || 0);
+                                    return (
+                                        <div key={i}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '.35rem', alignItems: 'baseline' }}>
+                                                <span style={{ fontSize: '.83rem', fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '55%' }}>{c.ten_khoa_hoc}</span>
+                                                <div style={{ display: 'flex', gap: '1rem', flexShrink: 0 }}>
+                                                    <span style={{ fontSize: '.75rem', color: '#2563eb', fontWeight: 700 }}>{c.tong_hoc_vien || 0} HV</span>
+                                                    <span style={{ fontSize: '.75rem', color: ORANGE, fontWeight: 700 }}>{rev > 0 ? fmtVnd(rev) : 'Miễn phí'}</span>
+                                                </div>
+                                            </div>
+                                            <div style={{ height: 8, background: '#f1f5f9', borderRadius: '99px', overflow: 'hidden' }}>
+                                                <div style={{ width: `${pct}%`, height: '100%', background: PIE_COLORS[i % PIE_COLORS.length], borderRadius: '99px', transition: 'width .8s ease' }} />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {published.length === 0 && <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>Chưa có khóa học đang bán</p>}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+/* ─────────── STATUS BADGE ─────────── */
 const StatusBadge = ({ published }) => published
-    ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem', padding: '.2rem .6rem', borderRadius: '99px', fontSize: '.72rem', fontWeight: 600, background: '#ecfdf5', color: '#059669' }}>● Đang bán</span>
-    : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem', padding: '.2rem .6rem', borderRadius: '99px', fontSize: '.72rem', fontWeight: 600, background: '#f1f5f9', color: '#64748b' }}>○ Bản nháp</span>;
+    ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem', padding: '.15rem .6rem', borderRadius: '99px', fontSize: '.7rem', fontWeight: 600, background: '#ecfdf5', color: '#059669' }}>● Đang bán</span>
+    : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem', padding: '.15rem .6rem', borderRadius: '99px', fontSize: '.7rem', fontWeight: 600, background: '#f1f5f9', color: '#64748b' }}>○ Bản nháp</span>;
 
-/* ── Toast ── */
+/* ─────────── TOAST ─────────── */
 const Toast = ({ msg, type = 'success' }) => (
-    <div style={{
-        position: 'fixed', bottom: '1.5rem', right: '1.5rem',
-        background: type === 'error' ? '#ef4444' : '#1e293b',
-        color: '#fff', padding: '.75rem 1.25rem',
-        borderRadius: '10px', fontSize: '.875rem',
-        zIndex: 9999, boxShadow: '0 10px 30px rgba(0,0,0,.2)',
-        display: 'flex', alignItems: 'center', gap: '.5rem',
-        animation: 'fadeUp .25s ease both',
-    }}>
+    <div style={{ position: 'fixed', bottom: '1.5rem', right: '1.5rem', background: type === 'error' ? '#ef4444' : '#1e293b', color: '#fff', padding: '.75rem 1.25rem', borderRadius: '10px', fontSize: '.875rem', zIndex: 9999, boxShadow: '0 10px 30px rgba(0,0,0,.2)', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
         {type === 'error' ? '❌' : '✅'} {msg}
     </div>
 );
 
-/* ── Level Badge ── */
-const LevelBadge = ({ level }) => {
-    const map = { CoSo: { label: 'Cơ sở', color: '#059669', bg: '#ecfdf5' }, TrungCap: { label: 'Trung cấp', color: '#2563eb', bg: '#eff6ff' }, NangCao: { label: 'Nâng cao', color: '#d97706', bg: '#fef3c7' } };
-    const s = map[level] || { label: level, color: '#64748b', bg: '#f1f5f9' };
-    return <span style={{ display: 'inline-flex', padding: '.15rem .5rem', borderRadius: '99px', fontSize: '.68rem', fontWeight: 600, background: s.bg, color: s.color }}>{s.label}</span>;
-};
-
-/* ── Course Card ── */
-const CourseCard = ({ course, onPublish, onUnpublish }) => {
-    const discount = course.gia_goc > course.gia_tien && course.gia_goc > 0
-        ? Math.round((1 - course.gia_tien / course.gia_goc) * 100) : 0;
-
+/* ─────────── COURSE ROW ─────────── */
+const CourseRow = ({ course, onPublish, onUnpublish }) => {
+    const rev = (course.gia_tien || 0) * (course.tong_hoc_vien || 0);
     return (
-        <div style={{
-            background: '#fff', border: '1px solid var(--border)', borderRadius: '12px',
-            overflow: 'hidden', transition: 'all .2s', boxShadow: 'var(--shadow-sm)',
-        }}
-            onMouseEnter={e => { e.currentTarget.style.boxShadow = 'var(--shadow-md)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-            onMouseLeave={e => { e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto auto', alignItems: 'center', gap: '1rem', padding: '.85rem 1.25rem', borderBottom: '1px solid #f1f5f9', transition: 'background .15s' }}
+            onMouseEnter={e => e.currentTarget.style.background = '#fffbeb'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
         >
-            {/* Thumbnail */}
-            <div style={{ width: '100%', aspectRatio: '16/9', background: `linear-gradient(135deg, ${SELLER_ORANGE_LIGHT}, #fff7ed)`, position: 'relative', overflow: 'hidden' }}>
-                {course.hinh_anh_thumbnail
-                    ? <img src={course.hinh_anh_thumbnail} alt={course.ten_khoa_hoc} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
-                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MI name="menu_book" style={{ fontSize: '2.5rem', color: '#d97706' }} /></div>
-                }
-                {/* Status overlay */}
-                <div style={{ position: 'absolute', top: '.5rem', left: '.5rem' }}><StatusBadge published={course.cong_khai} /></div>
-                {discount > 0 && (
-                    <div style={{ position: 'absolute', top: '.5rem', right: '.5rem', background: '#ef4444', color: '#fff', padding: '.15rem .45rem', borderRadius: '4px', fontSize: '.68rem', fontWeight: 700 }}>
-                        -{discount}%
-                    </div>
-                )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', minWidth: 0 }}>
+                <div style={{ width: 36, height: 36, borderRadius: '8px', background: course.hinh_anh_thumbnail ? 'transparent' : ORANGE_LIGHT, flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {course.hinh_anh_thumbnail
+                        ? <img src={course.hinh_anh_thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
+                        : <MI name="menu_book" style={{ fontSize: '.9rem', color: ORANGE }} />}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: '.88rem', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{course.ten_khoa_hoc}</div>
+                    <div style={{ fontSize: '.72rem', color: 'var(--text-muted)', marginTop: '.1rem' }}>{course.tong_hoc_vien || 0} học viên · {course.tong_bai || 0} bài</div>
+                </div>
             </div>
-
-            {/* Body */}
-            <div style={{ padding: '1rem' }}>
-                <div style={{ marginBottom: '.5rem' }}>
-                    <LevelBadge level={course.trinh_do} />
-                    {course.danh_muc && <span style={{ marginLeft: '.4rem', fontSize: '.72rem', color: 'var(--text-muted)' }}>{course.danh_muc}</span>}
-                </div>
-                <div style={{ fontWeight: 700, fontSize: '.9rem', lineHeight: 1.4, marginBottom: '.5rem', color: 'var(--text-primary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {course.ten_khoa_hoc}
-                </div>
-                <div style={{ fontSize: '.75rem', color: 'var(--text-muted)', marginBottom: '.75rem' }}>
-                    {course.tong_chuong || 0} chương · {course.tong_bai || 0} bài · {course.tong_hoc_vien || 0} học viên
-                </div>
-
-                {Number(course.tong_so_danh_gia_ntd) > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', marginBottom: '1rem', background: '#ecfdf5', padding: '.5rem', borderRadius: '8px', border: '1px solid #10b981' }}>
-                        <MI name="verified" style={{ fontSize: '1.1rem', color: '#059669' }} />
-                        <div style={{ fontSize: '.75rem', color: '#065f46', fontWeight: 700 }}>
-                            Hài lòng doanh nghiệp: {Number(course.trung_binh_sao_ntd).toFixed(1)}/5
-                        </div>
-                    </div>
+            <StatusBadge published={course.cong_khai} />
+            <div style={{ textAlign: 'right', minWidth: 90 }}>
+                <div style={{ fontWeight: 700, fontSize: '.88rem', color: '#059669' }}>{rev >= 1e6 ? `${(rev / 1e6).toFixed(1)}tr` : `${(rev / 1000).toFixed(0)}k`}₫</div>
+                <div style={{ fontSize: '.68rem', color: 'var(--text-muted)' }}>{Number(course.gia_tien).toLocaleString('vi-VN')}₫/kh</div>
+            </div>
+            <div style={{ display: 'flex', gap: '.4rem' }}>
+                <Link to={`/seller/courses/${course.id_khoa_hoc}/builder`}>
+                    <button style={{ padding: '.35rem .75rem', background: 'var(--bg-app)', border: '1px solid var(--border)', borderRadius: '7px', cursor: 'pointer', fontSize: '.78rem', fontWeight: 500, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '.25rem' }}>
+                        <MI name="edit" style={{ fontSize: '.9rem' }} /> Sửa
+                    </button>
+                </Link>
+                {course.cong_khai ? (
+                    <button onClick={() => onUnpublish(course.id_khoa_hoc)} style={{ padding: '.35rem .75rem', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '7px', cursor: 'pointer', fontSize: '.78rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '.25rem' }}>
+                        <MI name="visibility_off" style={{ fontSize: '.9rem' }} /> Ẩn
+                    </button>
+                ) : (
+                    <button onClick={() => onPublish(course.id_khoa_hoc)} style={{ padding: '.35rem .75rem', background: ORANGE_LIGHT, color: ORANGE_DARK, border: `1px solid #fcd34d`, borderRadius: '7px', cursor: 'pointer', fontSize: '.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '.25rem' }}>
+                        <MI name="publish" style={{ fontSize: '.9rem' }} /> Đăng
+                    </button>
                 )}
-
-                {/* Price */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.75rem' }}>
-                    <span style={{ fontWeight: 700, color: SELLER_ORANGE, fontSize: '1rem' }}>
-                        {Number(course.gia_tien) === 0 ? 'Miễn phí' : `${Number(course.gia_tien).toLocaleString('vi-VN')}₫`}
-                    </span>
-                    {discount > 0 && (
-                        <span style={{ fontSize: '.78rem', textDecoration: 'line-through', color: 'var(--text-muted)' }}>
-                            {Number(course.gia_goc).toLocaleString('vi-VN')}₫
-                        </span>
-                    )}
-                </div>
-
-                {/* Actions */}
-                <div style={{ display: 'flex', gap: '.5rem' }}>
-                    <Link to={`/seller/courses/${course.id_khoa_hoc}/builder`} style={{ flex: 1 }}>
-                        <button style={{ width: '100%', padding: '.45rem', background: 'var(--bg-app)', border: '1px solid var(--border)', borderRadius: '7px', cursor: 'pointer', fontSize: '.8rem', fontWeight: 500, color: 'var(--text-primary)', transition: 'all .15s', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '.3rem' }}
-                            onMouseEnter={e => e.currentTarget.style.background = '#e2e8f0'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-app)'}
-                        >
-                            <MI name="edit" style={{ fontSize: '1rem' }} /> Chỉnh sửa
-                        </button>
-                    </Link>
-                    {course.cong_khai ? (
-                        <button
-                            onClick={() => onUnpublish(course.id_khoa_hoc)}
-                            style={{ padding: '.45rem .75rem', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '7px', cursor: 'pointer', fontSize: '.8rem', fontWeight: 500, transition: 'all .15s', display: 'inline-flex', alignItems: 'center', gap: '.3rem' }}
-                        >
-                            <MI name="visibility_off" style={{ fontSize: '1rem' }} /> Ẩn
-                        </button>
-                    ) : (
-                        <button
-                            onClick={() => onPublish(course.id_khoa_hoc)}
-                            style={{ padding: '.45rem .75rem', background: SELLER_ORANGE_LIGHT, color: SELLER_ORANGE_DARK, border: `1px solid #fcd34d`, borderRadius: '7px', cursor: 'pointer', fontSize: '.8rem', fontWeight: 600, transition: 'all .15s', display: 'inline-flex', alignItems: 'center', gap: '.3rem' }}
-                        >
-                            <MI name="publish" style={{ fontSize: '1rem' }} /> Đăng bán
-                        </button>
-                    )}
-                </div>
             </div>
         </div>
     );
@@ -134,14 +307,13 @@ const CourseCard = ({ course, onPublish, onUnpublish }) => {
 const SellerDashboard = () => {
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState('all'); // 'all' | 'published' | 'draft'
+    const [filter, setFilter] = useState('all');
     const [search, setSearch] = useState('');
     const [toast, setToast] = useState(null);
+    const [page, setPage] = useState(1);
+    const [showRevModal, setShowRevModal] = useState(false);
 
-    const showToast = (msg, type = 'success') => {
-        setToast({ msg, type });
-        setTimeout(() => setToast(null), 2800);
-    };
+    const showToast = (msg, type = 'success') => { setToast({ msg, type }); setTimeout(() => setToast(null), 2800); };
 
     const fetchMyCourses = () => {
         api.get('/lms/khoa-hoc/my-courses/')
@@ -149,133 +321,209 @@ const SellerDashboard = () => {
             .catch(() => setCourses([]))
             .finally(() => setLoading(false));
     };
-
     useEffect(() => { fetchMyCourses(); }, []);
 
     const handlePublish = async (id) => {
-        try {
-            await api.post(`/lms/khoa-hoc/${id}/publish/`);
-            showToast('🚀 Khóa học đã được đăng bán thành công!');
-            fetchMyCourses();
-        } catch {
-            showToast('Lỗi khi đăng bán', 'error');
-        }
+        try { await api.post(`/lms/khoa-hoc/${id}/publish/`); showToast('Khóa học đã được đăng bán!'); fetchMyCourses(); }
+        catch { showToast('Lỗi khi đăng bán', 'error'); }
     };
     const handleUnpublish = async (id) => {
-        try {
-            await api.post(`/lms/khoa-hoc/${id}/unpublish/`);
-            showToast('Đã ẩn khóa học khỏi Marketplace');
-            fetchMyCourses();
-        } catch {
-            showToast('Lỗi khi ẩn khóa học', 'error');
-        }
+        try { await api.post(`/lms/khoa-hoc/${id}/unpublish/`); showToast('Đã ẩn khóa học'); fetchMyCourses(); }
+        catch { showToast('Lỗi khi ẩn', 'error'); }
     };
 
     const published = courses.filter(c => c.cong_khai);
     const drafts = courses.filter(c => !c.cong_khai);
     const totalStudents = courses.reduce((s, c) => s + (c.tong_hoc_vien || 0), 0);
-    const revenue = courses.filter(c => c.cong_khai).reduce((s, c) => s + (c.gia_tien || 0) * (c.tong_hoc_vien || 0), 0);
+    const totalRevenue = published.reduce((s, c) => s + (c.gia_tien || 0) * (c.tong_hoc_vien || 0), 0);
+    const maxRev = Math.max(...published.map(c => (c.gia_tien || 0) * (c.tong_hoc_vien || 0)), 1);
+    const fmtVnd = (n) => n >= 1e6 ? `${(n / 1e6).toFixed(1)}tr₫` : `${(n / 1000).toFixed(0)}k₫`;
 
+    // Reset page khi filter/search thay đổi
     const filtered = courses.filter(c => {
-        const matchFilter = filter === 'all' || (filter === 'published' && c.cong_khai) || (filter === 'draft' && !c.cong_khai);
-        const matchSearch = !search || c.ten_khoa_hoc?.toLowerCase().includes(search.toLowerCase());
-        return matchFilter && matchSearch;
+        const ok = filter === 'all' || (filter === 'pub' && c.cong_khai) || (filter === 'draft' && !c.cong_khai);
+        return ok && (!search || c.ten_khoa_hoc?.toLowerCase().includes(search.toLowerCase()));
     });
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+    const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+    const handleFilterChange = (val) => { setFilter(val); setPage(1); };
+    const handleSearchChange = (val) => { setSearch(val); setPage(1); };
 
     return (
         <div className="fade-up">
             {/* ── HEADER ── */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', gap: '1rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <div>
-                    <h1 style={{ fontSize: '1.35rem', fontWeight: 700, marginBottom: '.25rem' }}>Kênh người bán</h1>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '.875rem' }}>Quản lý và phát triển khóa học của bạn</p>
+                    <h1 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--secondary)', marginBottom: '.2rem' }}>Kênh Người bán</h1>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '.85rem' }}>Quản lý khóa học, theo dõi doanh thu và học viên</p>
                 </div>
                 <Link to="/seller/courses/new">
-                    <button style={{ padding: '.65rem 1.4rem', background: SELLER_ORANGE, color: '#fff', border: 'none', borderRadius: '9px', fontWeight: 600, cursor: 'pointer', fontSize: '.9rem', display: 'flex', alignItems: 'center', gap: '.4rem', boxShadow: '0 2px 8px rgba(217,119,6,.3)', transition: 'all .18s' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#b45309'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = SELLER_ORANGE; e.currentTarget.style.transform = 'translateY(0)'; }}
-                    >
-                        ＋ Tạo khóa học mới
+                    <button className="btn btn-primary" style={{ gap: '.4rem', fontSize: '.85rem' }}>
+                        <MI name="add" style={{ fontSize: '1.1rem' }} /> Tạo khóa học
                     </button>
                 </Link>
             </div>
 
-            {/* ── STATS ── */}
-            <div className="grid-3" style={{ marginBottom: '1.5rem' }}>
+            {/* ── STATS STRIP ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
                 {[
-                    { icon: 'menu_book', label: 'Tổng khóa học', value: courses.length, sub: `${published.length} đang bán · ${drafts.length} nháp`, color: '#2563eb', bg: '#eff6ff' },
-                    { icon: 'groups', label: 'Tổng học viên', value: totalStudents, sub: 'Tổng đăng ký', color: '#059669', bg: '#ecfdf5' },
-                    { icon: 'payments', label: 'Ước tính doanh thu', value: revenue >= 1e6 ? `${(revenue / 1e6).toFixed(1)}tr₫` : `${(revenue / 1000).toFixed(0)}k₫`, sub: 'Từ khóa học đang bán', color: SELLER_ORANGE, bg: SELLER_ORANGE_LIGHT },
+                    { icon: 'menu_book', label: 'Tổng khóa học', value: courses.length, sub: `${published.length} đbán · ${drafts.length} nháp` },
+                    { icon: 'groups', label: 'Học viên', value: totalStudents, sub: 'Tổng đăng ký' },
+                    { icon: 'paid', label: 'Doanh thu TT', value: fmtVnd(totalRevenue), sub: 'Tạm tính' },
+                    { icon: 'account_balance_wallet', label: 'Số dư khả dụng', value: fmtVnd(totalRevenue * 0.9), sub: 'Sau phí 10%' },
                 ].map((s, i) => (
-                    <div key={i} style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: 'var(--shadow-sm)' }}>
-                        <div style={{ width: 48, height: 48, background: s.bg, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <MI name={s.icon} style={{ fontSize: '1.5rem', color: s.color }} />
+                    <div key={i} style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem 1.25rem', boxShadow: 'var(--shadow-sm)', display: 'flex', alignItems: 'center', gap: '.85rem' }}>
+                        <div style={{ width: 40, height: 40, background: ORANGE_LIGHT, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <MI name={s.icon} style={{ fontSize: '1.3rem', color: ORANGE }} />
                         </div>
                         <div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</div>
-                            <div style={{ fontSize: '.8rem', color: 'var(--text-primary)', fontWeight: 600, marginTop: '.2rem' }}>{s.label}</div>
-                            <div style={{ fontSize: '.72rem', color: 'var(--text-muted)' }}>{s.sub}</div>
+                            <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#1e293b', lineHeight: 1 }}>{s.value}</div>
+                            <div style={{ fontSize: '.72rem', color: 'var(--text-muted)', marginTop: '.2rem' }}>{s.sub}</div>
                         </div>
                     </div>
                 ))}
             </div>
 
-            {/* ── FILTER & SEARCH ── */}
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', gap: '.35rem', background: '#fff', border: '1px solid var(--border)', borderRadius: '9px', padding: '.3rem' }}>
-                    {[
-                        { val: 'all', label: `Tất cả (${courses.length})` },
-                        { val: 'published', label: `Đang bán (${published.length})` },
-                        { val: 'draft', label: `Bản nháp (${drafts.length})` },
-                    ].map(f => (
-                        <button key={f.val} onClick={() => setFilter(f.val)} style={{
-                            padding: '.35rem .75rem', border: 'none', borderRadius: '6px', cursor: 'pointer',
-                            background: filter === f.val ? SELLER_ORANGE_LIGHT : 'transparent',
-                            color: filter === f.val ? SELLER_ORANGE_DARK : 'var(--text-secondary)',
-                            fontWeight: filter === f.val ? 600 : 400, fontSize: '.8rem', transition: 'all .15s',
-                        }}>
-                            {f.label}
-                        </button>
-                    ))}
+            {/* ── 2-COL LAYOUT ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '1.25rem' }}>
+
+                {/* Danh sách khóa học */}
+                <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '14px', boxShadow: 'var(--shadow-sm)', overflow: 'hidden' }}>
+                    {/* Toolbar */}
+                    <div style={{ display: 'flex', gap: '.75rem', padding: '1rem 1.25rem', borderBottom: '1px solid #f1f5f9', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: '.25rem', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: '8px', padding: '.2rem' }}>
+                            {[
+                                { val: 'all', label: `Tất cả (${courses.length})` },
+                                { val: 'pub', label: `Bán (${published.length})` },
+                                { val: 'draft', label: `Nháp (${drafts.length})` },
+                            ].map(f => (
+                                <button key={f.val} onClick={() => handleFilterChange(f.val)} style={{ padding: '.28rem .7rem', border: 'none', borderRadius: '6px', cursor: 'pointer', background: filter === f.val ? '#fff' : 'transparent', color: filter === f.val ? ORANGE_DARK : 'var(--text-secondary)', fontWeight: filter === f.val ? 700 : 400, fontSize: '.78rem', boxShadow: filter === f.val ? 'var(--shadow-sm)' : 'none', transition: 'all .15s' }}>
+                                    {f.label}
+                                </button>
+                            ))}
+                        </div>
+                        <div style={{ position: 'relative', flex: 1, minWidth: 150 }}>
+                            <MI name="search" style={{ position: 'absolute', left: '.65rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: '1rem' }} />
+                            <input
+                                value={search} onChange={e => handleSearchChange(e.target.value)}
+                                placeholder="Tìm khóa học..."
+                                style={{ width: '100%', paddingLeft: '2rem', paddingRight: '.75rem', paddingTop: '.4rem', paddingBottom: '.4rem', border: '1px solid var(--border)', borderRadius: '7px', fontSize: '.82rem', outline: 'none', background: '#fff', color: 'var(--text-primary)', fontFamily: 'inherit' }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Course list */}
+                    {loading ? (
+                        <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '.9rem' }}>Đang tải...</div>
+                    ) : filtered.length === 0 && courses.length === 0 ? (
+                        <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
+                            <MI name="inventory_2" style={{ fontSize: '3rem', color: '#cbd5e1', marginBottom: '.75rem' }} />
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '.9rem', marginBottom: '1.25rem' }}>Bạn chưa có khóa học nào. Hãy tạo ngay!</p>
+                            <Link to="/seller/courses/new"><button className="btn btn-primary">+ Tạo khóa học ngay</button></Link>
+                        </div>
+                    ) : filtered.length === 0 ? (
+                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Không tìm thấy kết quả</div>
+                    ) : (
+                        <div>
+                            {/* Table header */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto auto', gap: '1rem', padding: '.6rem 1.25rem', background: '#f8fafc' }}>
+                                <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Khóa học</span>
+                                <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Trạng thái</span>
+                                <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'right', minWidth: 90 }}>Doanh thu</span>
+                                <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', minWidth: 100 }}></span>
+                            </div>
+                            {paginated.map(c => (
+                                <CourseRow key={c.id_khoa_hoc} course={c} onPublish={handlePublish} onUnpublish={handleUnpublish} />
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '.75rem 1.25rem', borderTop: '1px solid #f1f5f9', background: '#fafafa' }}>
+                            <span style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>
+                                {Math.min((page - 1) * PAGE_SIZE + 1, filtered.length)}–{Math.min(page * PAGE_SIZE, filtered.length)} / {filtered.length} khóa học
+                            </span>
+                            <div style={{ display: 'flex', gap: '.3rem' }}>
+                                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '.3rem .65rem', border: '1px solid var(--border)', borderRadius: '6px', background: page === 1 ? '#f8fafc' : '#fff', color: page === 1 ? '#cbd5e1' : '#1e293b', cursor: page === 1 ? 'default' : 'pointer', fontSize: '.8rem' }}>‹</button>
+                                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                                    const p = i + 1;
+                                    return (
+                                        <button key={p} onClick={() => setPage(p)} style={{ padding: '.3rem .65rem', border: '1px solid', borderColor: page === p ? ORANGE : 'var(--border)', borderRadius: '6px', background: page === p ? ORANGE_LIGHT : '#fff', color: page === p ? ORANGE_DARK : '#1e293b', fontWeight: page === p ? 700 : 400, cursor: 'pointer', fontSize: '.8rem' }}>{p}</button>
+                                    );
+                                })}
+                                {totalPages > 5 && <span style={{ fontSize: '.8rem', color: 'var(--text-muted)', padding: '.3rem .4rem' }}>...</span>}
+                                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: '.3rem .65rem', border: '1px solid var(--border)', borderRadius: '6px', background: page === totalPages ? '#f8fafc' : '#fff', color: page === totalPages ? '#cbd5e1' : '#1e293b', cursor: page === totalPages ? 'default' : 'pointer', fontSize: '.8rem' }}>›</button>
+                            </div>
+                        </div>
+                    )}
                 </div>
-                <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
-                    <span style={{ position: 'absolute', left: '.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}><MI name="search" style={{ fontSize: '1rem' }} /></span>
-                    <input
-                        value={search} onChange={e => setSearch(e.target.value)}
-                        placeholder="Tìm kiếm khóa học..."
-                        style={{ width: '100%', padding: '.45rem .75rem .45rem 2.25rem', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '.875rem', outline: 'none', fontFamily: 'inherit', background: '#fff', color: 'var(--text-primary)' }}
-                    />
+
+                {/* Sidebar Top doanh thu */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '14px', padding: '1.25rem', boxShadow: 'var(--shadow-sm)', flex: 1 }}>
+                        {/* Header với nút Chi tiết */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                            <h3 style={{ fontSize: '.9rem', fontWeight: 700, color: '#1e293b' }}>Top doanh thu</h3>
+                            <button
+                                onClick={() => setShowRevModal(true)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '.3rem', padding: '.3rem .65rem', border: '1px solid var(--border)', borderRadius: '6px', background: '#f8fafc', color: 'var(--text-secondary)', fontSize: '.75rem', fontWeight: 600, cursor: 'pointer', transition: 'all .15s' }}
+                                onMouseEnter={e => { e.currentTarget.style.background = ORANGE_LIGHT; e.currentTarget.style.color = ORANGE_DARK; e.currentTarget.style.borderColor = '#fcd34d'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+                            >
+                                <MI name="bar_chart" style={{ fontSize: '.9rem' }} /> Chi tiết
+                            </button>
+                        </div>
+
+                        {published.length === 0 ? (
+                            <p style={{ fontSize: '.8rem', color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>Chưa có khóa học đang bán</p>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                {published.slice(0, 5).map((c, i) => {
+                                    const rev = (c.gia_tien || 0) * (c.tong_hoc_vien || 0);
+                                    const perc = (rev / maxRev) * 100;
+                                    return (
+                                        <div key={i}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.78rem', marginBottom: '.4rem' }}>
+                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '65%', fontWeight: 600, color: '#1e293b' }}>{c.ten_khoa_hoc}</span>
+                                                <span style={{ color: ORANGE, fontWeight: 700, flexShrink: 0 }}>{fmtVnd(rev)}</span>
+                                            </div>
+                                            <div style={{ height: 5, background: '#f1f5f9', borderRadius: '99px' }}>
+                                                <div style={{ width: `${perc}%`, height: '100%', background: ORANGE, borderRadius: '99px', transition: 'width .8s ease' }} />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {published.length > 5 && (
+                                    <button onClick={() => setShowRevModal(true)} style={{ background: 'none', border: 'none', color: ORANGE, fontSize: '.78rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left', padding: 0 }}>
+                                        + {published.length - 5} khóa khác →
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Số dư summary */}
+                        <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px dashed var(--border)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.82rem', marginBottom: '.4rem', color: 'var(--text-secondary)' }}>
+                                <span>Tổng doanh thu</span>
+                                <span style={{ fontWeight: 700, color: '#1e293b' }}>{fmtVnd(totalRevenue)}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.82rem', color: 'var(--text-secondary)' }}>
+                                <span>Phí nền tảng (10%)</span>
+                                <span style={{ fontWeight: 600, color: '#dc2626' }}>-{fmtVnd(totalRevenue * 0.1)}</span>
+                            </div>
+                            <div style={{ marginTop: '.75rem', padding: '.6rem .75rem', background: '#ecfdf5', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '.8rem', fontWeight: 700, color: '#065f46' }}>Nhận về ước tính</span>
+                                <span style={{ fontWeight: 800, color: '#059669', fontSize: '.95rem' }}>{fmtVnd(totalRevenue * 0.9)}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* ── COURSE GRID ── */}
-            {loading ? (
-                <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.5rem' }}><MI name="hourglass_empty" style={{ fontSize: '1.2rem' }} /> Đang tải...</div>
-            ) : filtered.length === 0 && courses.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '5rem 2rem', background: '#fff', borderRadius: '14px', border: '1px solid var(--border)' }}>
-                    <div style={{ fontSize: '4rem', marginBottom: '1rem', display: 'flex', justifyContent: 'center' }}><MI name="inventory_2" style={{ fontSize: '4rem', color: '#cbd5e1' }} /></div>
-                    <h3 style={{ fontWeight: 700, marginBottom: '.5rem', fontSize: '1.1rem' }}>Chưa có khóa học nào</h3>
-                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '.9rem' }}>Hãy tạo khóa học đầu tiên và bắt đầu chia sẻ kiến thức!</p>
-                    <Link to="/seller/courses/new">
-                        <button style={{ padding: '.7rem 1.75rem', background: SELLER_ORANGE, color: '#fff', border: 'none', borderRadius: '9px', fontWeight: 600, cursor: 'pointer', fontSize: '.95rem' }}>
-                            ＋ Tạo khóa học ngay
-                        </button>
-                    </Link>
-                </div>
-            ) : filtered.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                    Không tìm thấy khóa học phù hợp
-                </div>
-            ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' }}>
-                    {filtered.map(c => (
-                        <CourseCard key={c.id_khoa_hoc} course={c} onPublish={handlePublish} onUnpublish={handleUnpublish} />
-                    ))}
-                </div>
-            )}
-
-            {/* Toast Notification */}
             {toast && <Toast msg={toast.msg} type={toast.type} />}
+            {showRevModal && <RevenueModal courses={courses} onClose={() => setShowRevModal(false)} />}
         </div>
     );
 };

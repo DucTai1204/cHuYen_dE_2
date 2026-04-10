@@ -1,5 +1,6 @@
 import logging
 from django.db import models as db_models
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
@@ -29,9 +30,11 @@ class KhoaHocViewSet(viewsets.ModelViewSet):
     queryset = KhoaHoc.objects.all()
 
     def get_serializer_class(self):
-        # Seller (GiangVien) xem/sửa khóa học của mình → full serializer
-        if self.request.user.is_authenticated and getattr(self.request.user, 'vai_tro', '') == 'GiangVien':
-            return KhoaHocSerializer
+        # Seller (GiangVien) hoặc Nhà tuyển dụng xem/sửa khóa học của mình hoặc tuyển dụng → full serializer
+        if self.request.user.is_authenticated:
+            vai_tro = getattr(self.request.user, 'vai_tro', '')
+            if vai_tro in ['GiangVien', 'NhaTuyenDung']:
+                return KhoaHocSerializer
         # Student và public → serializer gọn (không nested chapters/lessons)
         return KhoaHocListSerializer
 
@@ -381,6 +384,17 @@ class DangKyHocViewSet(viewsets.ModelViewSet):
         data = []
         for dk in queryset:
             u = dk.id_nguoi_dung
+            # Lấy danh sách kỹ năng của khóa học này (đã chuẩn hóa đơn giản)
+            kn_list = dk.id_khoa_hoc.kynangkhoahoc_set.select_related('id_ky_nang').all()
+            ky_nang_detail = [
+                {
+                    'ten_ky_nang': kn.id_ky_nang.ten_ky_nang,
+                    'mo_ta': kn.id_ky_nang.mo_ta,
+                    'cap_do': kn.cap_do_dat_duoc
+                }
+                for kn in kn_list
+            ]
+
             data.append({
                 'id_user': u.id_nguoi_dung,
                 'ho_va_ten': u.ho_va_ten or u.username,
@@ -388,7 +402,7 @@ class DangKyHocViewSet(viewsets.ModelViewSet):
                 'email': u.email,
                 'hinh_anh_logo': getattr(u, 'hinh_anh_logo', ''),
                 'bio': getattr(u, 'bio', ''),
-                'ky_nang': getattr(u, 'ky_nang', ''),
+                'ky_nang_ca_nhan': getattr(u, 'ky_nang', ''),
                 'ready_to_work': getattr(u, 'ready_to_work', True),
                 'ten_khoa_hoc': dk.id_khoa_hoc.ten_khoa_hoc,
                 'trinh_do': dk.id_khoa_hoc.trinh_do,
@@ -396,7 +410,39 @@ class DangKyHocViewSet(viewsets.ModelViewSet):
                 'id_khoa_hoc': dk.id_khoa_hoc.id_khoa_hoc,
                 'trung_binh_sao_ntd': dk.id_khoa_hoc.trung_binh_sao_ntd,
                 'tong_so_danh_gia_ntd': dk.id_khoa_hoc.tong_so_danh_gia_ntd,
-                'so_nguoi_co_viec_lam': dk.id_khoa_hoc.so_nguoi_co_viec_lam
+                'so_nguoi_co_viec_lam': dk.id_khoa_hoc.so_nguoi_co_viec_lam,
+                'ky_nang_khoa_hoc': ky_nang_detail # Các kỹ năng đạt được từ khóa học này
+            })
+        return Response(data)
+
+    @action(detail=False, methods=['get'], url_path='talent-courses/(?P<user_id>[0-9]+)')
+    def talent_courses(self, request, user_id=None):
+        """Lấy danh sách tất cả các khóa học đã hoàn thành của một học viên cụ thể (dành cho NTD)"""
+        user_role = getattr(request.user, 'vai_tro', '')
+        if user_role not in ['NhaTuyenDung', 'QuanTri', 'GiangVien']:
+             return Response({'detail': 'Bạn không có quyền xem thông tin này.'}, status=status.HTTP_403_FORBIDDEN)
+        
+        enrollments = DangKyHoc.objects.filter(
+            id_nguoi_dung_id=user_id,
+            trang_thai_hoc='DaXong'
+        ).select_related('id_khoa_hoc')
+
+        data = []
+        for dk in enrollments:
+            kn_list = dk.id_khoa_hoc.kynangkhoahoc_set.select_related('id_ky_nang').all()
+            data.append({
+                'id_khoa_hoc': dk.id_khoa_hoc.id_khoa_hoc,
+                'ten_khoa_hoc': dk.id_khoa_hoc.ten_khoa_hoc,
+                'hinh_anh_thumbnail': dk.id_khoa_hoc.hinh_anh_thumbnail,
+                'trinh_do': dk.id_khoa_hoc.trinh_do,
+                'ngay_hoan_thanh': dk.ngay_dang_ky,
+                'ky_nang_khoa_hoc': [
+                    {
+                        'ten_ky_nang': kn.id_ky_nang.ten_ky_nang,
+                        'mo_ta': kn.id_ky_nang.mo_ta,
+                        'cap_do': kn.cap_do_dat_duoc
+                    } for kn in kn_list
+                ]
             })
         return Response(data)
 
@@ -608,11 +654,11 @@ class DanhGiaNhaTuyenDungViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Chỉ Nhà tuyển dụng mới có quyền thực hiện đánh giá này.")
         
-        # KIỂM TRA: Đã tuyển dụng người từ khóa học này chưa?
+        # KIỂM TRA: Đã tuyển dụng thành công người từ khóa học này chưa?
         khoa_hoc_id = self.request.data.get('id_khoa_hoc')
-        if not TuyenDung.objects.filter(id_nha_tuyen_dung=self.request.user, id_khoa_hoc=khoa_hoc_id).exists():
+        if not TuyenDung.objects.filter(id_nha_tuyen_dung=self.request.user, id_khoa_hoc=khoa_hoc_id, trang_thai='DaDongY').exists():
             from rest_framework.exceptions import ValidationError
-            raise ValidationError("Bạn phải tuyển dụng ít nhất một học viên từ khóa học này mới có thể để lại đánh giá chuyên môn.")
+            raise ValidationError("Bạn phải tuyển dụng thành công (ứng viên đã đồng ý) ít nhất một nhân sự từ khóa học này mới có quyền đánh giá chuyên môn.")
             
         serializer.save(id_nha_tuyen_dung=self.request.user)
 

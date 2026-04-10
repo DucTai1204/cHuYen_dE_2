@@ -36,7 +36,7 @@ const Stars = ({ n = 5 }) => (
 );
 
 /* ── Chapter Accordion ── */
-const ChapterAccordion = ({ chapter, defaultOpen = false, isEnrolled, courseId, completedIds = new Set(), isSequential = false, flatLessons = [] }) => {
+const ChapterAccordion = ({ chapter, defaultOpen = false, isEnrolled, courseId, completedIds = new Set(), isSequential = false, flatLessons = [], isRecruiter = false }) => {
     const [open, setOpen] = useState(defaultOpen);
     const lessons = chapter.bai_giang || [];
     const totalMin = lessons.reduce((s, l) => s + (l.thoi_luong_phut || 0), 0);
@@ -59,7 +59,7 @@ const ChapterAccordion = ({ chapter, defaultOpen = false, isEnrolled, courseId, 
             {open && (
                 <div>
                     {lessons.map((l, i) => {
-                        const accessible = isEnrolled || l.la_xem_truoc;
+                        const accessible = isEnrolled || l.la_xem_truoc || isRecruiter;
                         const done = completedIds.has(l.id_bai_giang);
                         // Kiểm tra khóa tuần tự
                         const idx = flatLessons.findIndex(fl => fl.id_bai_giang === l.id_bai_giang);
@@ -228,6 +228,7 @@ const CourseDetail = () => {
         ? Math.round((1 - course.gia_tien / course.gia_goc) * 100) : 0;
     const pct = Math.round(enrollment?.phan_tram_hoan_thanh || 0);
     const flatLessons = chapters.flatMap(ch => ch.bai_giang || []);
+    const isRecruiter = user?.vai_tro === 'NhaTuyenDung';
 
     /* ── Loading ── */
     if (loading) return (
@@ -441,6 +442,7 @@ const CourseDetail = () => {
                                     completedIds={completedIds}
                                     isSequential={course?.is_sequential}
                                     flatLessons={flatLessons}
+                                    isRecruiter={isRecruiter}
                                 />
                             ))
                         )}
@@ -637,7 +639,15 @@ const CourseDetail = () => {
                         )}
 
                         {/* Enrolled state */}
-                        {enrollment ? (
+                        {isRecruiter ? (
+                            <div style={{ background: 'linear-gradient(135deg, #eff6ff, #dbeafe)', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '1.25rem', textAlign: 'center' }}>
+                                <MI name="visibility" style={{ fontSize: '2rem', color: '#2563eb', marginBottom: '.5rem' }} />
+                                <div style={{ fontWeight: 800, color: '#1e40af', fontSize: '.9rem', marginBottom: '.5rem' }}>CHẾ ĐỘ NHÀ TUYỂN DỤNG</div>
+                                <p style={{ fontSize: '.75rem', color: '#3b82f6', lineHeight: 1.5, margin: 0 }}>
+                                    Bạn có quyền xem toàn bộ nội dung giáo trình bên dưới để đánh giá chất lượng đào tạo trước khi săn nhân tài.
+                                </p>
+                            </div>
+                        ) : enrollment ? (
                             <div>
                                 <div style={{ background: '#ecfdf5', border: '1px solid #d1fae5', borderRadius: '10px', padding: '.875rem', marginBottom: '1rem', textAlign: 'center' }}>
                                     <div style={{ fontSize: '1.3rem', marginBottom: '.3rem', display: 'flex', justifyContent: 'center' }}><MI name="check_circle" style={{ fontSize: '1.4rem', color: '#059669' }} /></div>
