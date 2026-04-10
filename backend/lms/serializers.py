@@ -134,6 +134,7 @@ class KhoaHocSerializer(serializers.ModelSerializer):
         fields = [
             'id_khoa_hoc', 'id_giang_vien', 'ten_khoa_hoc', 'mo_ta_ngan',
             'mo_ta_chi_tiet', 'gia_tien', 'gia_goc', 'hinh_anh_thumbnail',
+            'url_video_preview',
             'trinh_do', 'danh_muc', 'cong_khai', 'is_sequential',
             'trung_binh_sao', 'tong_so_danh_gia', 'tong_hoc_vien', 'rating_details',
             'trung_binh_sao_ntd', 'tong_so_danh_gia_ntd', 'so_nguoi_co_viec_lam',
@@ -177,7 +178,7 @@ class KhoaHocListSerializer(serializers.ModelSerializer):
         model = KhoaHoc
         fields = [
             'id_khoa_hoc', 'ten_khoa_hoc', 'mo_ta_ngan', 'gia_tien', 'gia_goc',
-            'hinh_anh_thumbnail', 'trinh_do', 'danh_muc', 'cong_khai',
+            'hinh_anh_thumbnail', 'url_video_preview', 'trinh_do', 'danh_muc', 'cong_khai',
             'ngay_tao', 'ngay_cap_nhat', 'tong_chuong', 'tong_bai',
             'ten_giang_vien', 'is_sequential',
             'so_nguoi_dang_hoc', 'so_nguoi_da_hoan_thanh', 

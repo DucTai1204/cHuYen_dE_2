@@ -17,7 +17,12 @@ const CourseCardNTD = ({ course }) => {
             >
                 <div style={{ width: '100%', aspectRatio: '16/9', background: 'linear-gradient(135deg, #fef3c7, #fde68a)', position: 'relative' }}>
                     {course.hinh_anh_thumbnail 
-                        ? <img src={course.hinh_anh_thumbnail} alt={course.ten_khoa_hoc} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ? <img 
+                            src={course.hinh_anh_thumbnail?.replace('maxresdefault.jpg', 'hqdefault.jpg')} 
+                            alt={course.ten_khoa_hoc} 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                            onError={e => e.target.style.display = 'none'} 
+                        />
                         : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MI name="auto_stories" style={{ fontSize: '3rem', color: '#fcd34d' }} /></div>
                     }
                     <div style={{ position: 'absolute', bottom: '.75rem', left: '.75rem', background: 'rgba(255,255,255,0.95)', padding: '.3rem .6rem', borderRadius: '6px', fontSize: '.65rem', fontWeight: 800, color: EMP_BLUE, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>

@@ -119,6 +119,21 @@ const CourseDetail = () => {
     const [hiringCompanies, setHiringCompanies] = useState([]);
     const [reviewLoading, setReviewLoading] = useState(false);
     const [myReview, setMyReview] = useState({ so_sao: 5, nhan_xet: '' });
+    const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+
+    /* ── Helper: trích xuất embed URL từ nhiều định dạng YouTube ── */
+    const getYouTubeEmbedUrl = (url) => {
+        if (!url) return null;
+        // Đã là embed URL
+        if (url.includes('/embed/')) return url.split('?')[0] + '?autoplay=1&rel=0';
+        // Dạng youtube.com/watch?v=xxx
+        const watchMatch = url.match(/[?&]v=([^&#]+)/);
+        if (watchMatch) return `https://www.youtube.com/embed/${watchMatch[1]}?autoplay=1&rel=0`;
+        // Dạng youtu.be/xxx
+        const shortMatch = url.match(/youtu\.be\/([^?&#]+)/);
+        if (shortMatch) return `https://www.youtube.com/embed/${shortMatch[1]}?autoplay=1&rel=0`;
+        return null;
+    };
 
     const showToast = (msg, type = 'success') => {
         setToast({ msg, type });
@@ -362,16 +377,54 @@ const CourseDetail = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', minWidth: 0 }}>
 
                     {/* Video Preview */}
-                    <div style={{ background: '#0f172a', borderRadius: '14px', aspectRatio: '16/9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '.75rem', color: 'rgba(255,255,255,.6)', overflow: 'hidden', position: 'relative' }}>
-                        {course.hinh_anh_thumbnail && (
-                            <img src={course.hinh_anh_thumbnail} alt="thumbnail" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: .4 }} onError={e => e.target.style.display = 'none'} />
+                    <div style={{ background: '#0f172a', borderRadius: '14px', aspectRatio: '16/9', overflow: 'hidden', position: 'relative', cursor: course.url_video_preview && !isPlayingPreview ? 'pointer' : 'default' }}
+                        onClick={() => { if (course.url_video_preview && !isPlayingPreview) setIsPlayingPreview(true); }}
+                    >
+                        {/* Đang play → hiện iframe */}
+                        {isPlayingPreview && course.url_video_preview ? (
+                            <iframe
+                                src={getYouTubeEmbedUrl(course.url_video_preview)}
+                                title="Video giới thiệu khóa học"
+                                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                            />
+                        ) : (
+                            <>
+                                {/* Thumbnail nền */}
+                                {course.hinh_anh_thumbnail && (
+                                    <img
+                                        src={course.hinh_anh_thumbnail?.replace('maxresdefault.jpg', 'hqdefault.jpg')}
+                                        alt="thumbnail"
+                                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: course.url_video_preview ? .6 : 1 }}
+                                        onError={e => e.target.style.display = 'none'}
+                                    />
+                                )}
+                                {/* Overlay nút play — CHỈ hiện khi có video preview */}
+                                {course.url_video_preview && (
+                                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '.6rem', background: 'rgba(0,0,0,.15)' }}>
+                                        <div style={{
+                                            width: 72, height: 72,
+                                            background: 'rgba(220,38,38,0.92)',
+                                            borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: '1.8rem', color: '#fff',
+                                            boxShadow: '0 6px 24px rgba(220,38,38,.55)',
+                                            transition: 'transform .18s, box-shadow .18s',
+                                        }}>
+                                            ▶
+                                        </div>
+                                        <span style={{ fontSize: '.9rem', fontWeight: 700, color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,.7)' }}>
+                                            Xem video giới thiệu
+                                        </span>
+                                        <span style={{ fontSize: '.75rem', color: 'rgba(255,255,255,.8)', textShadow: '0 1px 3px rgba(0,0,0,.6)' }}>
+                                            Nhấn để xem ngay
+                                        </span>
+                                    </div>
+                                )}
+                            </>
                         )}
-                        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.6rem' }}>
-                            <div style={{ width: 60, height: 60, border: '3px solid rgba(255,255,255,.6)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', background: 'rgba(0,0,0,.3)' }}>▶</div>
-                            <span style={{ fontSize: '.9rem', fontWeight: 600, color: '#fff' }}>Video giới thiệu khóa học</span>
-                            <span style={{ fontSize: '.78rem', opacity: .7 }}>Xem trước nội dung và phương pháp giảng dạy</span>
-                        </div>
                     </div>
+
 
                     {/* If enrolled: show progress */}
                     {enrollment && (

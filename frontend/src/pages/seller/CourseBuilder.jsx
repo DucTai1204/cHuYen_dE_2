@@ -486,11 +486,30 @@ const SettingsTab = ({ course, onUpdate, showToast }) => {
         gia_tien: course.gia_tien || '',
         gia_goc: course.gia_goc || '',
         hinh_anh_thumbnail: course.hinh_anh_thumbnail || '',
+        url_video_preview: course.url_video_preview || '',
         is_sequential: course.is_sequential || false,
     });
     const [saving, setSaving] = useState(false);
+    const [previewingVideo, setPreviewingVideo] = useState(false);
 
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+    /* Helper: trích xuất embed URL */
+    const getEmbedUrl = (url) => {
+        if (!url) return null;
+        if (url.includes('/embed/')) return url.split('?')[0] + '?autoplay=1&rel=0';
+        const watchMatch = url.match(/[?&]v=([^&#]+)/);
+        if (watchMatch) return `https://www.youtube.com/embed/${watchMatch[1]}?autoplay=1&rel=0`;
+        const shortMatch = url.match(/youtu\.be\/([^?&#]+)/);
+        if (shortMatch) return `https://www.youtube.com/embed/${shortMatch[1]}?autoplay=1&rel=0`;
+        return null;
+    };
+
+    /* Reset preview khi URL thay đổi */
+    const handleVideoUrlChange = (val) => {
+        setPreviewingVideo(false);
+        set('url_video_preview', val);
+    };
 
     const handleSave = async () => {
         setSaving(true);
@@ -610,6 +629,84 @@ const SettingsTab = ({ course, onUpdate, showToast }) => {
                 )}
             </div>
 
+            {/* Section: Video Preview */}
+            <div className="card" style={{ marginBottom: '1.25rem' }}>
+                <h3 style={{ fontWeight: 700, fontSize: '.95rem', marginBottom: '.5rem', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                    <MI name="play_circle" style={{ fontSize: '1.1rem', color: '#dc2626' }} /> Video Preview khóa học
+                </h3>
+                <p style={{ fontSize: '.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
+                    Video giới thiệu ngắn (~2-5 phút) được hiển thị ở trang chi tiết khóa học. Hỗ trợ link YouTube dạng <code>watch?v=</code>, <code>youtu.be/</code> hoặc <code>/embed/</code>.
+                </p>
+
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                    <label className="form-label">URL Video Preview (YouTube)</label>
+                    <div style={{ display: 'flex', gap: '.5rem' }}>
+                        <input
+                            className="form-input"
+                            value={form.url_video_preview}
+                            onChange={e => handleVideoUrlChange(e.target.value)}
+                            placeholder="https://youtube.com/watch?v=... hoặc https://youtu.be/..."
+                            style={{ flex: 1 }}
+                        />
+                        {form.url_video_preview && getEmbedUrl(form.url_video_preview) && (
+                            <button
+                                type="button"
+                                onClick={() => setPreviewingVideo(v => !v)}
+                                style={{
+                                    padding: '.4rem .9rem', flexShrink: 0,
+                                    background: previewingVideo ? '#fef2f2' : SELLER_ORANGE_LIGHT,
+                                    color: previewingVideo ? '#dc2626' : SELLER_ORANGE_DARK,
+                                    border: `1px solid ${previewingVideo ? '#fecaca' : '#fcd34d'}`,
+                                    borderRadius: '7px', cursor: 'pointer', fontSize: '.8rem', fontWeight: 700,
+                                    display: 'flex', alignItems: 'center', gap: '.3rem',
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
+                                <MI name={previewingVideo ? 'stop' : 'play_arrow'} style={{ fontSize: '1rem' }} />
+                                {previewingVideo ? 'Dừng xem' : 'Xem thử'}
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Video Player Preview */}
+                {form.url_video_preview && getEmbedUrl(form.url_video_preview) && (
+                    <div style={{ maxWidth: 560, borderRadius: '10px', overflow: 'hidden', border: '2px solid var(--border)', background: '#0f172a', aspectRatio: '16/9', position: 'relative' }}>
+                        {previewingVideo ? (
+                            <iframe
+                                src={getEmbedUrl(form.url_video_preview)}
+                                title="Preview video"
+                                style={{ width: '100%', height: '100%', border: 'none' }}
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                            />
+                        ) : (
+                            <div
+                                onClick={() => setPreviewingVideo(true)}
+                                style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '.6rem', cursor: 'pointer', color: '#fff' }}
+                            >
+                                {form.hinh_anh_thumbnail && (
+                                    <img src={form.hinh_anh_thumbnail?.replace('maxresdefault.jpg', 'hqdefault.jpg')} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: .4 }} onError={e => e.target.style.display = 'none'} />
+                                )}
+                                <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.5rem' }}>
+                                    <div style={{ width: 56, height: 56, background: 'rgba(220,38,38,.9)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', boxShadow: '0 4px 16px rgba(220,38,38,.5)' }}>
+                                        ▶
+                                    </div>
+                                    <span style={{ fontSize: '.8rem', fontWeight: 700, textShadow: '0 1px 4px rgba(0,0,0,.7)' }}>Nhấn để xem trước</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {form.url_video_preview && !getEmbedUrl(form.url_video_preview) && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', padding: '.6rem .75rem', background: '#fef2f2', borderRadius: '8px', border: '1px solid #fecaca' }}>
+                        <MI name="error" style={{ color: '#dc2626', fontSize: '1rem' }} />
+                        <span style={{ fontSize: '.8rem', color: '#dc2626', fontWeight: 500 }}>URL không hợp lệ. Vui lòng dùng link YouTube.</span>
+                    </div>
+                )}
+            </div>
+
             {/* Save Button */}
             <button
                 onClick={handleSave} disabled={saving}
@@ -699,18 +796,65 @@ const StudentsTab = ({ courseId }) => {
     );
 };
 
-/* ══════════════════════════════════════════════════════════════
-   TAB: XEM TRƯỚC
-══════════════════════════════════════════════════════════════ */
 const PreviewTab = ({ course, chapters }) => {
     const totalLessons = chapters.reduce((s, c) => s + (c.bai_giang?.length || 0), 0);
     const totalMinutes = chapters.reduce((s, c) => s + (c.bai_giang || []).reduce((ss, l) => ss + (l.thoi_luong_phut || 0), 0), 0);
     const freeLessons = chapters.reduce((s, c) => s + (c.bai_giang || []).filter(l => l.la_xem_truoc).length, 0);
+    const [isPlayingPreview, setIsPlayingPreview] = useState(false);
 
     const TRINH_DO_LABEL = { CoSo: 'Cơ sở', TrungCap: 'Trung cấp', NangCao: 'Nâng cao' };
 
+    const getEmbedUrl = (url) => {
+        if (!url) return null;
+        if (url.includes('/embed/')) return url.split('?')[0] + '?autoplay=1&rel=0';
+        const watchMatch = url.match(/[?&]v=([^&#]+)/);
+        if (watchMatch) return `https://www.youtube.com/embed/${watchMatch[1]}?autoplay=1&rel=0`;
+        const shortMatch = url.match(/youtu\.be\/([^?&#]+)/);
+        if (shortMatch) return `https://www.youtube.com/embed/${shortMatch[1]}?autoplay=1&rel=0`;
+        return null;
+    };
+
     return (
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
+            {/* ── Video Preview Section ── */}
+            <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.75rem' }}>
+                    <MI name="play_circle" style={{ color: '#dc2626', fontSize: '1.2rem' }} />
+                    <h3 style={{ fontWeight: 700, fontSize: '.95rem', color: 'var(--text-primary)' }}>Video Preview (như học viên thấy)</h3>
+                    {course.url_video_preview
+                        ? <span style={{ fontSize: '.7rem', background: '#ecfdf5', color: '#059669', padding: '.15rem .5rem', borderRadius: '99px', fontWeight: 700 }}>✓ Đã cấu hình</span>
+                        : <span style={{ fontSize: '.7rem', background: '#fef3c7', color: '#d97706', padding: '.15rem .5rem', borderRadius: '99px', fontWeight: 700 }}>Chưa có video</span>
+                    }
+                </div>
+                <div style={{ background: '#0f172a', borderRadius: '14px', aspectRatio: '16/9', overflow: 'hidden', position: 'relative', cursor: (!isPlayingPreview && course.url_video_preview) ? 'pointer' : 'default' }}
+                    onClick={() => { if (!isPlayingPreview && course.url_video_preview) setIsPlayingPreview(true); }}
+                >
+                    {isPlayingPreview && course.url_video_preview ? (
+                        <iframe
+                            src={getEmbedUrl(course.url_video_preview)}
+                            title="Video preview"
+                            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                        />
+                    ) : (
+                        <>
+                            {course.hinh_anh_thumbnail && (
+                                <img src={course.hinh_anh_thumbnail?.replace('maxresdefault.jpg', 'hqdefault.jpg')} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: course.url_video_preview ? .5 : .3 }} onError={e => e.target.style.display = 'none'} />
+                            )}
+                            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '.6rem', color: '#fff' }}>
+                                <div style={{ width: 68, height: 68, background: course.url_video_preview ? 'rgba(220,38,38,.9)' : 'rgba(255,255,255,.15)', border: course.url_video_preview ? 'none' : '3px solid rgba(255,255,255,.4)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.7rem', boxShadow: course.url_video_preview ? '0 4px 20px rgba(220,38,38,.5)' : 'none' }}>
+                                    ▶
+                                </div>
+                                <span style={{ fontWeight: 700, textShadow: '0 1px 4px rgba(0,0,0,.6)', fontSize: '.9rem' }}>
+                                    {course.url_video_preview ? 'Nhấn để xem video preview' : 'Chưa có video preview — Cấu hình trong tab Thiết lập'}
+                                </span>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+
             <div style={{ background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)', borderRadius: '14px', padding: '2rem', marginBottom: '1.5rem', color: '#fff' }}>
                 <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
                     {/* Thumbnail */}
@@ -783,6 +927,7 @@ const PreviewTab = ({ course, chapters }) => {
         </div>
     );
 };
+
 
 /* ══════════════════════════════════════════════════════════════
    MAIN: COURSE BUILDER

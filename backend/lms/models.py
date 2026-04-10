@@ -28,6 +28,7 @@ class KhoaHoc(models.Model):
     gia_tien = models.FloatField(default=0.0)
     gia_goc = models.FloatField(default=0.0)
     hinh_anh_thumbnail = models.CharField(max_length=500, blank=True, null=True)
+    url_video_preview = models.CharField(max_length=500, blank=True, null=True, help_text='URL video preview (YouTube embed URL)')
     trinh_do = models.CharField(max_length=50, choices=TRINH_DO_CHOICES, default='CoSo')
     danh_muc = models.CharField(max_length=100, blank=True, null=True)
     cong_khai = models.BooleanField(default=False)

@@ -268,7 +268,12 @@ const CourseRow = ({ course, onPublish, onUnpublish }) => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', minWidth: 0 }}>
                 <div style={{ width: 36, height: 36, borderRadius: '8px', background: course.hinh_anh_thumbnail ? 'transparent' : ORANGE_LIGHT, flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {course.hinh_anh_thumbnail
-                        ? <img src={course.hinh_anh_thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
+                        ? <img 
+                            src={course.hinh_anh_thumbnail?.replace('maxresdefault.jpg', 'hqdefault.jpg')} 
+                            alt="" 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                            onError={e => e.target.style.display = 'none'} 
+                        />
                         : <MI name="menu_book" style={{ fontSize: '.9rem', color: ORANGE }} />}
                 </div>
                 <div style={{ minWidth: 0 }}>

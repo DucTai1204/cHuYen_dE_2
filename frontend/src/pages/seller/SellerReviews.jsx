@@ -56,7 +56,12 @@ const SellerReviews = () => {
                                     background: '#f8fafc', width: '100%', aspectRatio: '16/9', 
                                     borderRadius: '16px', overflow: 'hidden', marginBottom: '1.5rem' 
                                 }}>
-                                    <img src={c.hinh_anh_thumbnail} alt="thumb" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display='none'} />
+                                    <img 
+                                        src={c.hinh_anh_thumbnail?.replace('maxresdefault.jpg', 'hqdefault.jpg')} 
+                                        alt="thumb" 
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                        onError={e => e.target.style.display = 'none'} 
+                                    />
                                 </div>
                                 <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#1e293b', marginBottom: '.5rem', lineHeight: 1.4 }}>{c.ten_khoa_hoc}</div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', color: '#64748b', fontSize: '.75rem', fontWeight: 600 }}>

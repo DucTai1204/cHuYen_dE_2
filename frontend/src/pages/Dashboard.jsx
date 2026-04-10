@@ -51,7 +51,12 @@ const EnrolledCard = ({ enrollment }) => {
                 {/* Thumbnail */}
                 <div style={{ width: '100%', aspectRatio: '16/9', background: 'linear-gradient(135deg, #eff6ff, #dbeafe)', overflow: 'hidden', position: 'relative' }}>
                     {course.hinh_anh_thumbnail
-                        ? <img src={course.hinh_anh_thumbnail} alt={course.ten_khoa_hoc} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
+                        ? <img 
+                            src={course.hinh_anh_thumbnail?.replace('maxresdefault.jpg', 'hqdefault.jpg')} 
+                            alt={course.ten_khoa_hoc} 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                            onError={e => e.target.style.display = 'none'} 
+                        />
                         : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MI name="menu_book" style={{ fontSize: '2.5rem', color: '#93c5fd' }} /></div>
                     }
                     {/* Progress overlay */}
@@ -131,7 +136,12 @@ const ExploreCard = ({ course }) => {
                 {/* Thumbnail */}
                 <div style={{ width: '100%', aspectRatio: '16/9', background: 'linear-gradient(135deg, #fef3c7, #fde68a)', overflow: 'hidden', position: 'relative' }}>
                     {course.hinh_anh_thumbnail
-                        ? <img src={course.hinh_anh_thumbnail} alt={course.ten_khoa_hoc} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
+                        ? <img 
+                            src={course.hinh_anh_thumbnail?.replace('maxresdefault.jpg', 'hqdefault.jpg')} 
+                            alt={course.ten_khoa_hoc} 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                            onError={e => e.target.style.display = 'none'}
+                        />
                         : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MI name="auto_stories" style={{ fontSize: '2.5rem', color: '#fcd34d' }} /></div>
                     }
                     {discount > 0 && (

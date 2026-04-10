@@ -179,7 +179,12 @@ const TalentProfile = () => {
                                 {courseHistory.map((h, i) => (
                                     <div key={i} style={{ display: 'flex', gap: '.75rem', alignItems: 'center' }}>
                                         <div style={{ width: 40, height: 40, borderRadius: '8px', background: '#f1f5f9', overflow: 'hidden', flexShrink: 0 }}>
-                                            {h.hinh_anh_thumbnail ? <img src={h.hinh_anh_thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <MI name="school" style={{ color: '#cbd5e1', margin: '10px' }} />}
+                                            {h.hinh_anh_thumbnail ? <img 
+                                                src={h.hinh_anh_thumbnail?.replace('maxresdefault.jpg', 'hqdefault.jpg')} 
+                                                alt="" 
+                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                                onError={e => e.target.style.display = 'none'}
+                                            /> : <MI name="school" style={{ color: '#cbd5e1', margin: '10px' }} />}
                                         </div>
                                         <div style={{ flex: 1 }}>
                                             <div style={{ fontSize: '.85rem', fontWeight: 700 }}>{h.ten_khoa_hoc}</div>

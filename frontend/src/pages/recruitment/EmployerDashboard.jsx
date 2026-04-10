@@ -110,7 +110,7 @@ const EmployerDashboard = () => {
                                 EduHKT cung cấp nền tảng kết nối nhân sự chất lượng cao, được đánh giá minh bạch thông qua chứng chỉ và kỹ năng thực tế. Hãy bắt đầu chọn lọc những ứng viên xuất sắc nhất cho doanh nghiệp của bạn!
                             </p>
                         </div>
-                    </div> q
+                    </div>
                 </>
             )}
         </div>
