@@ -13,87 +13,133 @@ const PAGE_SIZE = 10;
 const PIE_COLORS = ['#d97706','#b45309','#92400e','#78716c','#a8a29e','#57534e','#f59e0b','#ca8a04','#854d0e','#713f12'];
 
 /* ─────────── SVG PIE CHART ─────────── */
-const PieChart = ({ data, size = 240, hoveredIdx, onHover }) => {
+const PieChart = ({ data, size = 260, hoveredIdx, onHover }) => {
     const total = data.reduce((s, d) => s + d.value, 0);
     if (total === 0) return <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Không có dữ liệu</div>;
 
-    // Ngưỡng: nếu quá nhiều slice hoặc slice quá nhỏ thì ẩn label trong slice
-    const showLabel = data.length <= 7;
-    const POPUP = 14; // số px "nhấc lên" khi hover
+    const DEPTH = 16;
+    const RADIUS_X = 110;
+    const RADIUS_Y = 60;
+    const CX = size / 2;
+    const CY = size / 2 - 5;
 
-    let cumulative = 0;
-    const cx = size / 2, cy = size / 2, r = size / 2 - 12;
+    let cumulative = -Math.PI / 2; // Bắt đầu từ hướng 12h cho thuận mắt
 
     const slices = data.map((d, i) => {
         const pct = d.value / total;
-        const startAngle = cumulative * 2 * Math.PI - Math.PI / 2;
-        cumulative += pct;
-        const endAngle = cumulative * 2 * Math.PI - Math.PI / 2;
+        const startAngle = cumulative;
+        cumulative += pct * 2 * Math.PI;
+        const endAngle = cumulative;
         const midAngle = (startAngle + endAngle) / 2;
 
-        const x1 = cx + r * Math.cos(startAngle);
-        const y1 = cy + r * Math.sin(startAngle);
-        const x2 = cx + r * Math.cos(endAngle);
-        const y2 = cy + r * Math.sin(endAngle);
+        const x1 = CX + RADIUS_X * Math.cos(startAngle);
+        const y1 = CY + RADIUS_Y * Math.sin(startAngle);
+        const x2 = CX + RADIUS_X * Math.cos(endAngle);
+        const y2 = CY + RADIUS_Y * Math.sin(endAngle);
+
         const largeArc = pct > 0.5 ? 1 : 0;
-
-        // Vị trí label: 65% rán từ tâm hướng ra midAngle
-        const labelR = r * 0.62;
-        const lx = cx + labelR * Math.cos(midAngle);
-        const ly = cy + labelR * Math.sin(midAngle);
-
-        // Hướng translate khi hover
-        const dx = POPUP * Math.cos(midAngle);
-        const dy = POPUP * Math.sin(midAngle);
+        const baseColor = PIE_COLORS[i % PIE_COLORS.length];
 
         return {
-            path: `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`,
-            color: PIE_COLORS[i % PIE_COLORS.length],
-            pct,
-            pctLabel: (pct * 100).toFixed(pct < 0.05 ? 0 : 1),
+            id: i,
             label: d.label,
-            lx, ly, dx, dy,
-            showPctLabel: showLabel && pct >= 0.05, // Ẩn nếu slice nhỏ hơn 5%
+            value: d.value,
+            pctLabel: (pct * 100).toFixed(1),
+            color: baseColor,
+            startAngle, endAngle, midAngle,
+            x1, y1, x2, y2, largeArc,
+            lx: CX + (RADIUS_X * 0.75) * Math.cos(midAngle),
+            ly: CY + (RADIUS_Y * 0.75) * Math.sin(midAngle)
         };
     });
 
+    // Sắp xếp thứ tự vẽ: Vẽ những phần ở xa (phía trên) trước, phần ở gần (phía dưới) sau
+    // Đặc biệt: Miếng đang được Hover phải vẽ sau cùng để nó đè lên tất cả.
+    const sortedSlices = [...slices].sort((a, b) => {
+        if (a.id === hoveredIdx) return 1;
+        if (b.id === hoveredIdx) return -1;
+        // Phần nào có Sin(midAngle) lớn hơn thì ở gần người xem hơn -> vẽ sau
+        return Math.sin(a.midAngle) - Math.sin(b.midAngle);
+    });
+
     return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: 'visible' }}>
-            {slices.map((s, i) => {
-                const isHovered = hoveredIdx === i;
-                return (
-                    <g key={i}
+        <div style={{ position: 'relative', width: size, height: size }}>
+            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: 'visible' }}>
+                <defs>
+                    {slices.map((s, i) => (
+                        <linearGradient key={`grad-${i}`} id={`grad-${i}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stopColor={s.color} />
+                            <stop offset="100%" stopColor={s.color} stopOpacity={0.8} />
+                        </linearGradient>
+                    ))}
+                    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                </defs>
+
+                {/* --- HIT AREAS (Vùng bắt sự kiện cố định - KHÔNG DI CHUYỂN - Vẽ trước để không chắn các khối) --- */}
+                {slices.map((s, i) => (
+                    <path
+                        key={`hit-${i}`}
+                        d={`M ${CX} ${CY} L ${s.x1} ${s.y1} A ${RADIUS_X} ${RADIUS_Y} 0 ${s.largeArc} 1 ${s.x2} ${s.y2} Z`}
+                        fill="transparent"
+                        style={{ cursor: 'pointer', pointerEvents: 'auto' }}
                         onMouseEnter={() => onHover && onHover(i)}
                         onMouseLeave={() => onHover && onHover(null)}
-                        style={{ cursor: 'pointer' }}
-                    >
-                        {/* Static Hit Area (Vùng nhận sự kiện tĩnh - không di chuyển) */}
-                        <path d={s.path} fill="transparent" />
+                    />
+                ))}
 
-                        {/* Moving Visual Part (Phần hiển thị - có chuyển động) */}
-                        <g 
-                            transform={isHovered ? `translate(${s.dx}, ${s.dy})` : 'translate(0,0)'}
-                            style={{ transition: 'transform .25s cubic-bezier(0.34, 1.56, 0.64, 1)', pointerEvents: 'none' }}
+                {/* --- LỚP 1: CẠNH BÊN (SIDES) --- */}
+                {sortedSlices.map((s) => {
+                    const isHovered = hoveredIdx === s.id;
+                    const hoverY = isHovered ? -12 : 0;
+                    const sidePath = `M ${s.x1} ${s.y1} A ${RADIUS_X} ${RADIUS_Y} 0 ${s.largeArc} 1 ${s.x2} ${s.y2} L ${s.x2} ${s.y2 + DEPTH} A ${RADIUS_X} ${RADIUS_Y} 0 ${s.largeArc} 0 ${s.x1} ${s.y1 + DEPTH} Z`;
+                    
+                    return (
+                        <g key={`side-${s.id}`} transform={`translate(0, ${hoverY})`} style={{ transition: 'transform .3s cubic-bezier(0.34, 1.56, 0.64, 1)', pointerEvents: 'none' }}>
+                            <path d={sidePath} fill={s.color} filter="brightness(0.65)" />
+                            <path d={`M ${CX} ${CY} L ${s.x1} ${s.y1} L ${s.x1} ${s.y1 + DEPTH} L ${CX} ${CY + DEPTH} Z`} fill={s.color} filter="brightness(0.55)" />
+                            <path d={`M ${CX} ${CY} L ${s.x2} ${s.y2} L ${s.x2} ${s.y2 + DEPTH} L ${CX} ${CY + DEPTH} Z`} fill={s.color} filter="brightness(0.75)" />
+                        </g>
+                    );
+                })}
+
+                {/* --- LỚP 2: MẶT TRÊN (TOP FACES) --- */}
+                {sortedSlices.map((s) => {
+                    const isHovered = hoveredIdx === s.id;
+                    const hoverY = isHovered ? -12 : 0;
+                    const path = `M ${CX} ${CY} L ${s.x1} ${s.y1} A ${RADIUS_X} ${RADIUS_Y} 0 ${s.largeArc} 1 ${s.x2} ${s.y2} Z`;
+
+                    return (
+                        <g key={`top-${s.id}`} 
+                            transform={`translate(0, ${hoverY})`}
+                            style={{ transition: 'all .3s cubic-bezier(0.34, 1.56, 0.64, 1)', pointerEvents: 'none' }}
                         >
-                            <path d={s.path} fill={s.color} stroke="#fff" strokeWidth={isHovered ? 3 : 1.5} />
-                            {s.showPctLabel && (
-                                <text
-                                    x={s.lx} y={s.ly}
-                                    textAnchor="middle" dominantBaseline="middle"
-                                    fill="#fff"
-                                    fontSize={s.pct > 0.12 ? 11 : 9}
-                                    fontWeight={700}
-                                    style={{ userSelect: 'none' }}
+                            <path 
+                                d={path} 
+                                fill={`url(#grad-${s.id})`} 
+                                stroke="#fff" 
+                                strokeWidth={isHovered ? 2 : 0.5} 
+                                filter={isHovered ? 'url(#glow)' : ''}
+                            />
+                            {(isHovered || parseFloat(s.pctLabel) > 8) && (
+                                <text 
+                                    x={s.lx} y={s.ly} 
+                                    fill="#fff" 
+                                    textAnchor="middle" 
+                                    fontSize={isHovered ? 14 : 10} 
+                                    fontWeight="900"
+                                    style={{ transition: 'all .3s' }}
                                 >
                                     {s.pctLabel}%
                                 </text>
                             )}
                         </g>
-                        <title>{s.label}: {(s.pct * 100).toFixed(1)}%</title>
-                    </g>
-                );
-            })}
-        </svg>
+                    );
+                })}
+            </svg>
+        </div>
     );
 };
 
