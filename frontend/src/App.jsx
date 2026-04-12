@@ -15,6 +15,8 @@ import ExamProctoring from './pages/ExamProctoring';
 import CourseDetail from './pages/CourseDetail';
 import LessonView from './pages/LessonView';
 import CertificatesPage from './pages/CertificatesPage';
+import ExploreCourses from './pages/ExploreCourses';
+import StudentCareer from './pages/StudentCareer';
 import ProfilePage from './pages/ProfilePage';
 
 // Seller pages
@@ -140,8 +142,11 @@ function App() {
                     } />
 
 
-                    <Route path="/courses" element={
-                        <PrivateRoute><StudentLayout><Dashboard /></StudentLayout></PrivateRoute>
+                    <Route path="/courses/explore" element={
+                        <PrivateRoute><StudentLayout><ExploreCourses /></StudentLayout></PrivateRoute>
+                    } />
+                    <Route path="/career" element={
+                        <PrivateRoute><StudentLayout><StudentCareer /></StudentLayout></PrivateRoute>
                     } />
                     <Route path="/exam" element={
                         <PrivateRoute><StudentLayout><ExamProctoring /></StudentLayout></PrivateRoute>

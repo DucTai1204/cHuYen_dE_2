@@ -7,7 +7,9 @@ const EMP_BLUE = 'var(--secondary)';
 const CourseCardNTD = ({ course }) => {
     return (
         <Link to={`/courses/${course.id_khoa_hoc}`} style={{ textDecoration: 'none' }}>
-            <div style={{
+            <div 
+                className="stagger-item"
+                style={{
                 background: '#fff', border: '1px solid var(--border)', borderRadius: '15px',
                 overflow: 'hidden', transition: 'all .25s', cursor: 'pointer',
                 boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column'
@@ -15,17 +17,23 @@ const CourseCardNTD = ({ course }) => {
                 onMouseEnter={e => { e.currentTarget.style.boxShadow = 'var(--shadow-md)'; e.currentTarget.style.transform = 'translateY(-3px)'; }}
                 onMouseLeave={e => { e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; e.currentTarget.style.transform = 'translateY(0)'; }}
             >
-                <div style={{ width: '100%', aspectRatio: '16/9', background: 'linear-gradient(135deg, #fef3c7, #fde68a)', position: 'relative' }}>
-                    {course.hinh_anh_thumbnail 
-                        ? <img 
-                            src={course.hinh_anh_thumbnail?.replace('maxresdefault.jpg', 'hqdefault.jpg')} 
-                            alt={course.ten_khoa_hoc} 
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                            onError={e => e.target.style.display = 'none'} 
-                        />
-                        : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MI name="auto_stories" style={{ fontSize: '3rem', color: '#fcd34d' }} /></div>
-                    }
-                    <div style={{ position: 'absolute', bottom: '.75rem', left: '.75rem', background: 'rgba(255,255,255,0.95)', padding: '.3rem .6rem', borderRadius: '6px', fontSize: '.65rem', fontWeight: 800, color: EMP_BLUE, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                {/* Thumbnail Container với tỉ lệ 16:9 cố định */}
+                <div style={{ width: '100%', position: 'relative', paddingBottom: '56.25%', background: 'linear-gradient(135deg, #fef3c7, #fde68a)', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+                        {course.hinh_anh_thumbnail 
+                            ? <img 
+                                src={course.hinh_anh_thumbnail?.replace('maxresdefault.jpg', 'hqdefault.jpg')} 
+                                alt={course.ten_khoa_hoc} 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                onError={e => e.target.style.display = 'none'} 
+                            />
+                            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <MI name="auto_stories" style={{ fontSize: '3rem', color: '#fcd34d' }} />
+                              </div>
+                        }
+                    </div>
+                    {/* Badge Trình độ */}
+                    <div style={{ position: 'absolute', bottom: '.75rem', left: '.75rem', background: 'rgba(255,255,255,0.95)', padding: '.3rem .6rem', borderRadius: '6px', fontSize: '.65rem', fontWeight: 800, color: EMP_BLUE, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', zIndex: 2 }}>
                         {course.trinh_do === 'CoSo' ? 'CƠ SỞ' : course.trinh_do === 'TrungCap' ? 'TRUNG CẤP' : 'NÂNG CAO'}
                     </div>
                 </div>
@@ -48,10 +56,6 @@ const CourseCardNTD = ({ course }) => {
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', color: '#f59e0b', fontSize: '.75rem', fontWeight: 700, marginBottom: '1rem' }}>
-                        <MI name="verified" style={{ fontSize: '.9rem', color: '#10b981' }} />
-                        <span>Tín nhiệm DN: {course.trung_binh_sao_ntd || '—'}/5.0</span>
-                    </div>
 
                     <div style={{ borderTop: '1px dashed var(--border)', paddingTop: '.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', gap: '.3rem', flexWrap: 'wrap' }}>

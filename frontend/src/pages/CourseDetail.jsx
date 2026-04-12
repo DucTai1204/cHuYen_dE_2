@@ -292,31 +292,6 @@ const CourseDetail = () => {
             {/* ── META ── */}
             {/* TRUST SCORE PREMIUM WIDGET */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
-                <div style={{ background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', borderRadius: '15px', padding: '1.5rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '1.5rem', boxShadow: '0 10px 25px rgba(30,58,138,.2)' }}>
-                    <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '2.5rem', fontWeight: 900, lineHeight: 1 }}>{calculateTrustScore(course)}</div>
-                        <div style={{ fontSize: '.7rem', opacity: .8, fontWeight: 700, marginTop: '.4rem', letterSpacing: '.05em' }}>TRUST SCORE</div>
-                    </div>
-                    <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.7rem', marginBottom: '.25rem' }}>
-                            <span>Tín nhiệm DN</span>
-                            <span style={{ fontWeight: 800, color: '#34d399' }}>
-                                {Number(course.tong_so_danh_gia_ntd) > 0 ? `${course.tong_so_danh_gia_ntd} DN đánh giá` : 'Đang cập nhật'}
-                            </span>
-                        </div>
-                        <div style={{ height: 5, background: 'rgba(255,255,255,0.2)', borderRadius: '10px', overflow: 'hidden' }}>
-                            <div style={{ height: '100%', width: (Number(course.trung_binh_sao_ntd || 0) * 20) + '%', background: '#34d399' }}></div>
-                        </div>
-                        
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.7rem', marginBottom: '.25rem', marginTop: '.75rem' }}>
-                            <span>Tỉ lệ việc làm</span>
-                            <span style={{ fontWeight: 800 }}>{Math.round((Number(course.so_nguoi_co_viec_lam) / (Number(course.so_nguoi_da_hoan_thanh) || 1)) * 100)}%</span>
-                        </div>
-                        <div style={{ height: 5, background: 'rgba(255,255,255,0.2)', borderRadius: '10px', overflow: 'hidden' }}>
-                            <div style={{ height: '100%', width: (Number(course.so_nguoi_co_viec_lam) / (Number(course.so_nguoi_da_hoan_thanh) || 1)) * 100 + '%', background: '#fbbf24' }}></div>
-                        </div>
-                    </div>
-                </div>
 
                 <div style={{ background: '#fff', borderRadius: '15px', border: '1px solid var(--border)', padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '.75rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>

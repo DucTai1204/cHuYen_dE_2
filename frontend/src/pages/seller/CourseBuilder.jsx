@@ -764,7 +764,7 @@ const StudentsTab = ({ courseId }) => {
                         {students.map(s => (
                             <tr key={s.id_dang_ky} style={{ borderBottom: '1px solid var(--border)' }}>
                                 <td style={{ padding: '.75rem 1rem', fontSize: '.875rem', fontWeight: 500 }}>
-                                    {s.id_nguoi_dung?.ho_va_ten || s.id_nguoi_dung?.username || `HV #${s.id_nguoi_dung}`}
+                                    {s.ho_va_ten || s.ten_hoc_vien || `HV #${s.id_nguoi_dung}`}
                                 </td>
                                 <td style={{ padding: '.75rem 1rem' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>

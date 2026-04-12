@@ -311,6 +311,7 @@ const CourseRow = ({ course, onPublish, onUnpublish }) => {
 ══════════════════════════════════════════════════════════════ */
 const SellerDashboard = () => {
     const [courses, setCourses] = useState([]);
+    const [streamingCourses, setStreamingCourses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
     const [search, setSearch] = useState('');
@@ -320,13 +321,34 @@ const SellerDashboard = () => {
 
     const showToast = (msg, type = 'success') => { setToast({ msg, type }); setTimeout(() => setToast(null), 2800); };
 
-    const fetchMyCourses = () => {
+    const fetchMyCourses = (active = { current: true }) => {
+        setLoading(true);
         api.get('/lms/khoa-hoc/my-courses/')
-            .then(res => setCourses(res.data || []))
-            .catch(() => setCourses([]))
-            .finally(() => setLoading(false));
+            .then(res => {
+                if (!active.current) return;
+                const data = res.data || [];
+                setCourses(data);
+                
+                setStreamingCourses([]);
+                data.forEach((item, index) => {
+                    setTimeout(() => {
+                        if (!active.current) return;
+                        setStreamingCourses(prev => {
+                            if (prev.some(c => c.id_khoa_hoc === item.id_khoa_hoc)) return prev;
+                            return [...prev, item];
+                        });
+                    }, index * 100);
+                });
+            })
+            .catch(() => { if (active.current) setCourses([]); })
+            .finally(() => { if (active.current) setLoading(false); });
     };
-    useEffect(() => { fetchMyCourses(); }, []);
+
+    useEffect(() => {
+        const active = { current: true };
+        fetchMyCourses(active);
+        return () => { active.current = false; };
+    }, []);
 
     const handlePublish = async (id) => {
         try { await api.post(`/lms/khoa-hoc/${id}/publish/`); showToast('Khóa học đã được đăng bán!'); fetchMyCourses(); }
@@ -345,7 +367,7 @@ const SellerDashboard = () => {
     const fmtVnd = (n) => n >= 1e6 ? `${(n / 1e6).toFixed(1)}tr₫` : `${(n / 1000).toFixed(0)}k₫`;
 
     // Reset page khi filter/search thay đổi
-    const filtered = courses.filter(c => {
+    const filtered = (search || filter !== 'all' ? courses : streamingCourses).filter(c => {
         const ok = filter === 'all' || (filter === 'pub' && c.cong_khai) || (filter === 'draft' && !c.cong_khai);
         return ok && (!search || c.ten_khoa_hoc?.toLowerCase().includes(search.toLowerCase()));
     });
@@ -378,7 +400,7 @@ const SellerDashboard = () => {
                     { icon: 'paid', label: 'Doanh thu TT', value: fmtVnd(totalRevenue), sub: 'Tạm tính' },
                     { icon: 'account_balance_wallet', label: 'Số dư khả dụng', value: fmtVnd(totalRevenue * 0.9), sub: 'Sau phí 10%' },
                 ].map((s, i) => (
-                    <div key={i} style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem 1.25rem', boxShadow: 'var(--shadow-sm)', display: 'flex', alignItems: 'center', gap: '.85rem' }}>
+                    <div key={i} className="stagger-item" style={{ animationDelay: `${i * 0.1}s`, background: '#fff', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem 1.25rem', boxShadow: 'var(--shadow-sm)', display: 'flex', alignItems: 'center', gap: '.85rem' }}>
                         <div style={{ width: 40, height: 40, background: ORANGE_LIGHT, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <MI name={s.icon} style={{ fontSize: '1.3rem', color: ORANGE }} />
                         </div>
@@ -420,7 +442,11 @@ const SellerDashboard = () => {
 
                     {/* Course list */}
                     {loading ? (
-                        <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '.9rem' }}>Đang tải...</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                            {[1, 2, 3, 4, 5].map(i => (
+                                <div key={i} className="skeleton" style={{ height: 60, margin: '1rem' }} />
+                            ))}
+                        </div>
                     ) : filtered.length === 0 && courses.length === 0 ? (
                         <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
                             <MI name="inventory_2" style={{ fontSize: '3rem', color: '#cbd5e1', marginBottom: '.75rem' }} />
@@ -438,8 +464,10 @@ const SellerDashboard = () => {
                                 <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'right', minWidth: 90 }}>Doanh thu</span>
                                 <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', minWidth: 100 }}></span>
                             </div>
-                            {paginated.map(c => (
-                                <CourseRow key={c.id_khoa_hoc} course={c} onPublish={handlePublish} onUnpublish={handleUnpublish} />
+                            {paginated.map((c, i) => (
+                                <div key={c.id_khoa_hoc} className="stagger-item" style={{ animationDelay: '0s' }}>
+                                    <CourseRow course={c} onPublish={handlePublish} onUnpublish={handleUnpublish} />
+                                </div>
                             ))}
                         </div>
                     )}

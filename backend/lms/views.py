@@ -33,9 +33,10 @@ class KhoaHocViewSet(viewsets.ModelViewSet):
         # Seller (GiangVien) hoặc Nhà tuyển dụng xem/sửa khóa học của mình hoặc tuyển dụng → full serializer
         if self.request.user.is_authenticated:
             vai_tro = getattr(self.request.user, 'vai_tro', '')
-            if vai_tro in ['GiangVien', 'NhaTuyenDung']:
+            # Chỉ dùng serializer đầy đủ cho retrieve (xem chi tiết) hoặc khi GiangVien đang sửa bài
+            if vai_tro in ['GiangVien', 'NhaTuyenDung'] and self.action != 'list':
                 return KhoaHocSerializer
-        # Student và public → serializer gọn (không nested chapters/lessons)
+        # Mặc định sử dụng list serializer cho danh sách để nhẹ dữ liệu
         return KhoaHocListSerializer
 
     def get_permissions(self):
@@ -47,19 +48,21 @@ class KhoaHocViewSet(viewsets.ModelViewSet):
         user = self.request.user
         vai_tro = getattr(user, 'vai_tro', '') if user.is_authenticated else ''
 
+        # Tối ưu: Mặc định luôn prefetch các bảng đánh giá để dùng trong Serializer
+        qs = KhoaHoc.objects.select_related('id_giang_vien').prefetch_related('danh_gia', 'danh_gia_ntd')
+
         # my_courses: chỉ lấy khóa học của giảng viên đang đăng nhập
         if self.action == 'my_courses':
-            return KhoaHoc.objects.filter(id_giang_vien=user)
+            return qs.filter(id_giang_vien=user)
 
         # Giảng viên sửa/xem khóa học của chính mình (kể cả draft)
         if vai_tro == 'GiangVien' and self.action in ['retrieve', 'update', 'partial_update', 'destroy', 'publish', 'unpublish']:
-            return KhoaHoc.objects.filter(
+            return qs.filter(
                 db_models.Q(cong_khai=True) | db_models.Q(id_giang_vien=user)
             )
 
-        # Tất cả các trường hợp còn lại (student list/retrieve, public)
-        # → CHỈ trả khóa học đã công khai
-        return KhoaHoc.objects.filter(cong_khai=True)
+        # Mặc định chỉ hiện các khóa đã công khai
+        return qs.filter(cong_khai=True)
 
     def perform_create(self, serializer):
         # Tự động gán giảng viên = user hiện tại
@@ -363,6 +366,7 @@ class DangKyHocViewSet(viewsets.ModelViewSet):
         ).select_related('id_nguoi_dung', 'id_khoa_hoc')
 
         # Áp dụng các bộ lọc nếu có
+        # Áp dụng các bộ lọc để lấy danh sách User ID khớp yêu cầu
         if khoa_hoc_id:
             queryset = queryset.filter(id_khoa_hoc_id=khoa_hoc_id)
         if trinh_do:
@@ -378,13 +382,37 @@ class DangKyHocViewSet(viewsets.ModelViewSet):
                 Q(id_nguoi_dung__username__icontains=search_name)
             )
 
-        # Sắp xếp theo ngày đăng ký (có thể coi là ngày hoàn thành nếu cập nhật logic 100%)
-        queryset = queryset.order_by('-ngay_dang_ky')
-        
-        data = []
-        for dk in queryset:
+        # Lấy danh sách ID người dùng thỏa mãn bộ lọc
+        matched_user_ids = queryset.values_list('id_nguoi_dung_id', flat=True).distinct()
+
+        # Query lại TOÀN BỘ các khóa học đã hoàn thành của những người này để gộp dữ liệu đầy đủ
+        # Tối ưu: Prefetch kỹ năng để tránh N+1 Query
+        full_queryset = DangKyHoc.objects.filter(
+            id_nguoi_dung_id__in=matched_user_ids,
+            trang_thai_hoc='DaXong'
+        ).select_related(
+            'id_nguoi_dung', 
+            'id_khoa_hoc'
+        ).prefetch_related(
+            'id_khoa_hoc__kynangkhoahoc_set__id_ky_nang'
+        ).order_by('-ngay_dang_ky')
+
+        # Lấy danh sách trạng thái tuyển dụng của NTD hiện tại với các ứng viên này
+        from .models import TuyenDung
+        my_recruitments = TuyenDung.objects.filter(id_nha_tuyen_dung=request.user)
+        # Map: (hoc_vien_id, khoa_hoc_id) -> trang_thai
+        recruitment_map = {
+            (r.id_hoc_vien_id, r.id_khoa_hoc_id): r.trang_thai 
+            for r in my_recruitments
+        }
+
+        talents_map = {}
+        for dk in full_queryset:
             u = dk.id_nguoi_dung
-            # Lấy danh sách kỹ năng của khóa học này (đã chuẩn hóa đơn giản)
+            uid = u.id_nguoi_dung
+            course_id = dk.id_khoa_hoc.id_khoa_hoc
+            
+            # Lấy danh sách kỹ năng của khóa học này
             kn_list = dk.id_khoa_hoc.kynangkhoahoc_set.select_related('id_ky_nang').all()
             ky_nang_detail = [
                 {
@@ -395,24 +423,55 @@ class DangKyHocViewSet(viewsets.ModelViewSet):
                 for kn in kn_list
             ]
 
-            data.append({
-                'id_user': u.id_nguoi_dung,
-                'ho_va_ten': u.ho_va_ten or u.username,
-                'username': u.username,
-                'email': u.email,
-                'hinh_anh_logo': getattr(u, 'hinh_anh_logo', ''),
-                'bio': getattr(u, 'bio', ''),
-                'ky_nang_ca_nhan': getattr(u, 'ky_nang', ''),
-                'ready_to_work': getattr(u, 'ready_to_work', True),
+            if uid not in talents_map:
+                talents_map[uid] = {
+                    'id_user': uid,
+                    'ho_va_ten': u.ho_va_ten or u.username,
+                    'username': u.username,
+                    'email': u.email,
+                    'hinh_anh_logo': getattr(u, 'hinh_anh_logo', ''),
+                    'bio': getattr(u, 'bio', ''),
+                    'ky_nang_ca_nhan': getattr(u, 'ky_nang', ''),
+                    'ready_to_work': getattr(u, 'ready_to_work', True),
+                    'completed_courses': [],
+                    '_skills_dedup': {}
+                }
+            
+            talents_map[uid]['completed_courses'].append({
+                'id_khoa_hoc': course_id,
                 'ten_khoa_hoc': dk.id_khoa_hoc.ten_khoa_hoc,
                 'trinh_do': dk.id_khoa_hoc.trinh_do,
                 'ngay_hoan_thanh': dk.ngay_dang_ky,
-                'id_khoa_hoc': dk.id_khoa_hoc.id_khoa_hoc,
                 'trung_binh_sao_ntd': dk.id_khoa_hoc.trung_binh_sao_ntd,
                 'tong_so_danh_gia_ntd': dk.id_khoa_hoc.tong_so_danh_gia_ntd,
-                'so_nguoi_co_viec_lam': dk.id_khoa_hoc.so_nguoi_co_viec_lam,
-                'ky_nang_khoa_hoc': ky_nang_detail # Các kỹ năng đạt được từ khóa học này
+                'recruitment_status': recruitment_map.get((uid, course_id)) # ChoXacNhan, DaDongY, TuChoi or None
             })
+
+            for kn in ky_nang_detail:
+                sname = kn['ten_ky_nang']
+                if sname not in talents_map[uid]['_skills_dedup']:
+                    talents_map[uid]['_skills_dedup'][sname] = kn
+        
+        # Chuyển map thành list (giữ nguyên thứ tự ID người dùng xuất hiện đầu tiên)
+        data = []
+        # Duyệt qua matched_user_ids ban đầu để giữ thứ tự kết quả tìm kiếm gốc
+        for uid in matched_user_ids:
+            if uid in talents_map:
+                tdata = talents_map[uid]
+                tdata['completed_courses'].sort(key=lambda x: x['ngay_hoan_thanh'], reverse=True)
+                prime = tdata['completed_courses'][0]
+                
+                tdata['ten_khoa_hoc'] = prime['ten_khoa_hoc']
+                tdata['id_khoa_hoc'] = prime['id_khoa_hoc']
+                tdata['ngay_hoan_thanh'] = prime['ngay_hoan_thanh']
+                tdata['trung_binh_sao_ntd'] = prime['trung_binh_sao_ntd']
+                tdata['tong_so_danh_gia_ntd'] = prime['tong_so_danh_gia_ntd']
+                tdata['ky_nang_khoa_hoc'] = list(tdata['_skills_dedup'].values())
+                del tdata['_skills_dedup']
+                data.append(tdata)
+                # Đánh dấu đã xử lý để không trùng nếu matched_user_ids có lặp (mặc dù đã .distinct())
+                del talents_map[uid]
+
         return Response(data)
 
     @action(detail=False, methods=['get'], url_path='talent-courses/(?P<user_id>[0-9]+)')
@@ -422,6 +481,11 @@ class DangKyHocViewSet(viewsets.ModelViewSet):
         if user_role not in ['NhaTuyenDung', 'QuanTri', 'GiangVien']:
              return Response({'detail': 'Bạn không có quyền xem thông tin này.'}, status=status.HTTP_403_FORBIDDEN)
         
+        # Lấy trạng thái tuyển dụng của NTD hiện tại với các khóa học của học viên này
+        from .models import TuyenDung
+        recruitments = TuyenDung.objects.filter(id_nha_tuyen_dung=request.user, id_hoc_vien_id=user_id)
+        recruitment_map = {r.id_khoa_hoc_id: r.trang_thai for r in recruitments}
+
         enrollments = DangKyHoc.objects.filter(
             id_nguoi_dung_id=user_id,
             trang_thai_hoc='DaXong'
@@ -429,13 +493,15 @@ class DangKyHocViewSet(viewsets.ModelViewSet):
 
         data = []
         for dk in enrollments:
+            course_id = dk.id_khoa_hoc.id_khoa_hoc
             kn_list = dk.id_khoa_hoc.kynangkhoahoc_set.select_related('id_ky_nang').all()
             data.append({
-                'id_khoa_hoc': dk.id_khoa_hoc.id_khoa_hoc,
+                'id_khoa_hoc': course_id,
                 'ten_khoa_hoc': dk.id_khoa_hoc.ten_khoa_hoc,
                 'hinh_anh_thumbnail': dk.id_khoa_hoc.hinh_anh_thumbnail,
                 'trinh_do': dk.id_khoa_hoc.trinh_do,
                 'ngay_hoan_thanh': dk.ngay_dang_ky,
+                'recruitment_status': recruitment_map.get(course_id),
                 'ky_nang_khoa_hoc': [
                     {
                         'ten_ky_nang': kn.id_ky_nang.ten_ky_nang,

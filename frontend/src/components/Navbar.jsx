@@ -36,9 +36,9 @@ const Navbar = () => {
     // Định nghĩa menu cho từng vai trò
     const menus = {
         HocVien: [
-            { icon: 'dashboard', label: 'Dashboard', path: '/dashboard' },
-            { icon: 'menu_book', label: 'Khóa học', path: '/courses' },
-            { icon: 'chat', label: 'Tin nhắn', path: '/messages' },
+            { icon: 'dashboard', label: 'Tổng quan', path: '/dashboard' },
+            { icon: 'search', label: 'Khám phá', path: '/courses/explore' },
+            { icon: 'work_outline', label: 'Sự nghiệp', path: '/career' },
             { icon: 'workspace_premium', label: 'Chứng chỉ', path: '/certificates' },
         ],
         GiangVien: [

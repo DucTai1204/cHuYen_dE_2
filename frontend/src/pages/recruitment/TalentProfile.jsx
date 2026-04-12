@@ -14,10 +14,8 @@ const TalentProfile = () => {
     const [recallHoverId, setRecallHoverId] = useState(null);
     const [message, setMessage] = useState('');
     const [certs, setCerts] = useState([]);
-    const [activeCourse, setActiveCourse] = useState(null); // Full course data with syllabus
     const [courseHistory, setCourseHistory] = useState([]);
     const [loadingHistory, setLoadingHistory] = useState(true);
-    const [loadingSyllabus, setLoadingSyllabus] = useState(true);
     const messagesEndRef = useRef(null);
 
     useEffect(() => {
@@ -30,14 +28,6 @@ const TalentProfile = () => {
                 });
         }
 
-        // Fetch Course Syllabus for the active course
-        if (talent?.id_khoa_hoc) {
-            setLoadingSyllabus(true);
-            api.get(`/lms/khoa-hoc/${talent.id_khoa_hoc}/`)
-                .then(res => setActiveCourse(res.data))
-                .catch(err => console.error('Lỗi tải giáo trình:', err))
-                .finally(() => setLoadingSyllabus(false));
-        }
 
         // Fetch Course History (All finished courses)
         setLoadingHistory(true);
@@ -50,7 +40,7 @@ const TalentProfile = () => {
         api.get(`/certificates/chung-chi-so/?id_user=${id}`)
             .then(res => setCerts(res.data || []))
             .catch(err => console.error('Lỗi tải chứng chỉ:', err));
-    }, [id, talent?.id_khoa_hoc]);
+    }, [id]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -112,28 +102,63 @@ const TalentProfile = () => {
 
                         <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', fontSize: '.9rem' }}><MI name="email" style={{ color: '#1e3a8a' }} /> {talent.email}</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', fontSize: '.9rem' }}><MI name="verified" style={{ color: '#059669' }} /> Chứng chỉ gần nhất: {talent.ten_khoa_hoc}</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', fontSize: '.9rem' }}><MI name="event" style={{ color: '#1e3a8a' }} /> Hoàn thành: {new Date(talent.ngay_hoan_thanh).toLocaleDateString('vi-VN')}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', fontSize: '.9rem' }}>
+                                <MI name="verified" style={{ color: '#059669' }} /> 
+                                <span>Đã tốt nghiệp <strong>{talent.completed_courses?.length || 1}</strong> khóa học</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', fontSize: '.9rem' }}><MI name="star" style={{ color: '#f59e0b' }} /> Uy tín: {talent.trung_binh_sao_ntd || '—'}/5.0</div>
                         </div>
 
-                        <button
-                            onClick={async () => {
-                                if (!window.confirm(`Bạn có chắc chắn muốn tuyển dụng ${talent.ho_va_ten} dựa trên chứng chỉ ${talent.ten_khoa_hoc}?`)) return;
-                                try {
-                                    await api.post('/lms/tuyen-dung/', {
-                                        id_hoc_vien: talent.id_user,
-                                        id_khoa_hoc: talent.id_khoa_hoc,
-                                        ghi_chu: `Tuyển dụng qua hệ thống dựa trên khóa học ${talent.ten_khoa_hoc}`
-                                    });
-                                    alert('Chúc mừng! Bạn đã ghi nhận tuyển dụng thành công. Lời mời đã được gửi tới học viên để xác nhận.');
-                                } catch (err) {
-                                    alert(err.response?.data?.detail || 'Lỗi khi ghi nhận tuyển dụng');
-                                }
-                            }}
-                            style={{ width: '100%', marginTop: '2rem', padding: '.85rem', background: '#1e3a8a', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.5rem', boxShadow: '0 4px 12px rgba(30,58,138,.3)' }}
-                        >
-                            <MI name="work" /> Tuyển dụng nhân tài
-                        </button>
+                        {(() => {
+                            const isHiredAny = talent.completed_courses?.some(c => c.recruitment_status === 'DaDongY');
+                            const isPendingAny = talent.completed_courses?.some(c => c.recruitment_status === 'ChoXacNhan');
+                            
+                            // Trạng thái cụ thể cho khóa học này
+                            const currentHired = talent.completed_courses?.some(c => c.id_khoa_hoc == talent.id_khoa_hoc && c.recruitment_status === 'DaDongY');
+                            const currentPending = talent.completed_courses?.some(c => c.id_khoa_hoc == talent.id_khoa_hoc && c.recruitment_status === 'ChoXacNhan');
+
+                            const displayHired = isHiredAny || currentHired;
+                            const displayPending = isPendingAny || currentPending;
+
+                            return (
+                                <button
+                                    disabled={displayHired || displayPending}
+                                    onClick={async () => {
+                                        if (!window.confirm(`Bạn có chắc chắn muốn tuyển dụng ${talent.ho_va_ten} dựa trên chứng chỉ ${talent.ten_khoa_hoc}?`)) return;
+                                        try {
+                                            await api.post('/lms/tuyen-dung/', {
+                                                id_hoc_vien: talent.id_user,
+                                                id_khoa_hoc: talent.id_khoa_hoc,
+                                                ghi_chu: `Tuyển dụng qua hệ thống dựa trên khóa học ${talent.ten_khoa_hoc}`
+                                            });
+                                            alert('Chúc mừng! Bạn đã ghi nhận tuyển dụng thành công. Lời mời đã được gửi tới học viên để xác nhận.');
+                                            // Cập nhật state local để đổi màu nút ngay lập tức
+                                            setTalent(prev => ({
+                                                ...prev,
+                                                completed_courses: prev.completed_courses.map(c => 
+                                                    c.id_khoa_hoc === talent.id_khoa_hoc ? { ...c, recruitment_status: 'ChoXacNhan' } : c
+                                                )
+                                            }));
+                                        } catch (err) {
+                                            alert(err.response?.data?.detail || 'Lỗi khi ghi nhận tuyển dụng');
+                                        }
+                                    }}
+                                    style={{ 
+                                        width: '100%', marginTop: '2rem', padding: '.85rem', 
+                                        background: displayHired ? '#059669' : (displayPending ? '#d97706' : '#1e3a8a'), 
+                                        color: '#fff', border: 'none', borderRadius: '10px', 
+                                        fontWeight: 800, cursor: (displayHired || displayPending) ? 'default' : 'pointer', 
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.5rem', 
+                                        boxShadow: '0 4px 12px rgba(30,58,138,.3)',
+                                        opacity: (displayHired || displayPending) ? 0.8 : 1,
+                                        transition: 'all .25s'
+                                    }}
+                                >
+                                    <MI name={displayHired ? 'verified' : (displayPending ? 'hourglass_empty' : 'work')} /> 
+                                    {displayHired ? 'Đã tuyển dụng thành công' : (displayPending ? 'Đang chờ xác nhận...' : 'Tuyển dụng nhân tài')}
+                                </button>
+                            );
+                        })()}
                     </div>
 
                     {/* CERTIFICATES LIST SECTION */}
@@ -187,7 +212,11 @@ const TalentProfile = () => {
                                             /> : <MI name="school" style={{ color: '#cbd5e1', margin: '10px' }} />}
                                         </div>
                                         <div style={{ flex: 1 }}>
-                                            <div style={{ fontSize: '.85rem', fontWeight: 700 }}>{h.ten_khoa_hoc}</div>
+                                            <div style={{ fontSize: '.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                {h.ten_khoa_hoc}
+                                                {h.recruitment_status === 'DaDongY' && <span style={{ color: '#059669', fontSize: '.65rem', fontWeight: 800, background: '#ecfdf5', padding: '1px 6px', borderRadius: '4px' }}>ĐÃ TUYỂN</span>}
+                                                {h.recruitment_status === 'ChoXacNhan' && <span style={{ color: '#d97706', fontSize: '.65rem', fontWeight: 800, background: '#fffbeb', padding: '1px 6px', borderRadius: '4px' }}>ĐANG CHỜ</span>}
+                                            </div>
                                             <div style={{ fontSize: '.7rem', color: 'var(--text-muted)' }}>Xong ngày: {new Date(h.ngay_hoan_thanh).toLocaleDateString('vi-VN')}</div>
                                         </div>
                                     </div>
@@ -198,77 +227,14 @@ const TalentProfile = () => {
                 </div>
 
                 {/* Right Side: Syllabus & Chat */}
+                {/* Right Side: Chat & Skills */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                    {/* SKILLS ACHIEVED */}
-                    <div style={{ background: '#fff', padding: '1.75rem', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '.5rem', color: '#1e3a8a' }}>
-                            <MI name="stars" style={{ color: '#f59e0b' }} /> Kỹ năng thực tế đạt được từ khóa học
-                        </h3>
-                        <p style={{ fontSize: '.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>Dựa trên giáo trình của khóa học <strong>{talent.ten_khoa_hoc}</strong>, học viên đã được trang bị các kiến thức và khả năng thực hành sau:</p>
-                        
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-                            {talent.ky_nang_khoa_hoc && talent.ky_nang_khoa_hoc.length > 0 ? (
-                                talent.ky_nang_khoa_hoc.map((kn, i) => (
-                                    <div key={i} style={{ padding: '1rem', background: '#f0f9ff', borderRadius: '12px', border: '1px solid #e0f2fe', display: 'flex', gap: '.75rem' }}>
-                                        <MI name="check_circle" style={{ color: '#0369a1', marginTop: '.2rem' }} />
-                                        <div>
-                                            <div style={{ fontWeight: 800, fontSize: '.9rem', color: '#0369a1' }}>{kn.ten_ky_nang}</div>
-                                            <div style={{ fontSize: '.78rem', color: '#075985', marginTop: '.25rem', lineHeight: 1.4 }}>{kn.mo_ta || 'Thực hành thành thạo các kỹ năng chuyên môn trong dự án thực tế.'}</div>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '10px', color: 'var(--text-muted)', fontSize: '.85rem', fontStyle: 'italic', gridColumn: '1/-1' }}>
-                                    Giảng viên chưa liệt kê chi tiết các kỹ năng thực tế cho đầu ra khóa học này.
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* COURSE SYLLABUS / CURRICULUM */}
-                    <div style={{ background: '#fff', padding: '1.75rem', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '.5rem', color: '#1e3a8a' }}>
-                            <MI name="menu_book" style={{ color: '#1e3a8a' }} /> Giáo trình khóa học (Chi tiết nội dung đã học)
-                        </h3>
-                        
-                        {loadingSyllabus ? (
-                            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Đang tải giáo trình...</div>
-                        ) : activeCourse?.chuong_set?.length > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
-                                {activeCourse.chuong_set.map((ch, i) => (
-                                    <details key={i} style={{ border: '1px solid #f1f5f9', borderRadius: '10px', background: '#f8fafc', overflow: 'hidden' }}>
-                                        <summary style={{ padding: '1rem', fontWeight: 700, fontSize: '.9rem', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#475569' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                                                <MI name="folder" style={{ color: '#d97706' }} /> {ch.ten_chuong}
-                                            </div>
-                                            <span style={{ fontSize: '.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>{ch.bai_giang?.length || 0} bài học</span>
-                                        </summary>
-                                        <div style={{ padding: '0 1rem 1rem 2.5rem', display: 'flex', flexDirection: 'column', gap: '.6rem', background: '#fff' }}>
-                                            {ch.bai_giang?.map((l, li) => (
-                                                <div key={li} style={{ fontSize: '.82rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                                                    <MI name={l.loai_bai === 'Video' ? 'play_circle' : (l.loai_bai === 'Quiz' ? 'quiz' : 'description')} style={{ fontSize: '1rem', opacity: .5 }} />
-                                                    {l.ten_bai_giang}
-                                                    {l.thoi_luong_phut > 0 && <span style={{ marginLeft: 'auto', fontSize: '.7rem', opacity: .6 }}>{l.thoi_luong_phut} phút</span>}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </details>
-                                ))}
-                            </div>
-                        ) : (
-                            <div style={{ background: '#f8fafc', padding: '2rem', borderRadius: '10px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                <MI name="info" style={{ fontSize: '2rem', display: 'block', margin: '0 auto .5rem', opacity: .3 }} />
-                                Khóa học này chưa cập nhật nội dung giáo trình.
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Chat Interface */}
-                    <div style={{ background: '#fff', borderRadius: '15px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', height: '500px', boxShadow: 'var(--shadow-sm)' }}>
+                    {/* Chat Interface (Moved to Top) */}
+                    <div style={{ background: '#fff', borderRadius: '15px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', height: '450px', boxShadow: 'var(--shadow-sm)' }}>
                         {/* Chat Header */}
                         <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '.75rem', flexShrink: 0 }}>
                             <div style={{ width: 32, height: 32, background: '#e2e8f0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.9rem', fontWeight: 700 }}>{talent.ho_va_ten[0]}</div>
-                            <span style={{ fontWeight: 700 }}>Để lại lời nhắn cho {talent.ho_va_ten}</span>
+                            <span style={{ fontWeight: 700 }}>Nhắn tin tuyển dụng cho {talent.ho_va_ten}</span>
                         </div>
 
                         {/* Chat Messages */}
@@ -297,15 +263,8 @@ const TalentProfile = () => {
                                                     <button
                                                         onClick={() => handleRecall(m.id_tin_nhan)}
                                                         style={{
-                                                            background: 'none',
-                                                            border: 'none',
-                                                            padding: 0,
-                                                            cursor: 'pointer',
-                                                            color: '#94a3b8',
-                                                            opacity: recallHoverId === m.id_tin_nhan ? 1 : 0,
-                                                            transition: 'var(--t)',
-                                                            display: 'flex',
-                                                            alignItems: 'center'
+                                                            background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#94a3b8',
+                                                            opacity: recallHoverId === m.id_tin_nhan ? 1 : 0, transition: 'var(--t)', display: 'flex', alignItems: 'center'
                                                         }}
                                                         title="Thu hồi tin nhắn"
                                                     >
@@ -350,13 +309,33 @@ const TalentProfile = () => {
                             <input
                                 value={message}
                                 onChange={handleInputChange}
-                                placeholder="Nhập nội dung tin nhắn tuyển dụng..."
+                                placeholder="Nhập nội dung trao đổi tuyển dụng..."
                                 style={{ flex: 1, padding: '.75rem', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none' }}
                             />
                             <button type="submit" style={{ width: 45, height: 45, background: '#1e3a8a', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <MI name="send" />
                             </button>
                         </form>
+                    </div>
+
+                    {/* SKILLS ACHIEVED (Compact) */}
+                    <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '15px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '.5rem', color: '#1e3a8a' }}>
+                            <MI name="stars" style={{ color: '#f59e0b' }} /> Kỹ năng thực tế đạt được
+                        </h3>
+                        
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.75rem' }}>
+                            {talent.ky_nang_khoa_hoc && talent.ky_nang_khoa_hoc.length > 0 ? (
+                                talent.ky_nang_khoa_hoc.map((kn, i) => (
+                                    <div key={i} title={kn.mo_ta} style={{ padding: '.5rem .75rem', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #e0f2fe', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                                        <MI name="check_circle" style={{ color: '#0369a1', fontSize: '1rem' }} />
+                                        <div style={{ fontWeight: 700, fontSize: '.82rem', color: '#0369a1' }}>{kn.ten_ky_nang}</div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div style={{ color: 'var(--text-muted)', fontSize: '.85rem', fontStyle: 'italic' }}>Chưa có kỹ năng xác thực từ khóa học.</div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

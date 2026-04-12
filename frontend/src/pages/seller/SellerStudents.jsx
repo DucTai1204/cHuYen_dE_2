@@ -26,6 +26,7 @@ const StatusBadge = ({ status }) => {
 const SellerStudents = () => {
     const [courses, setCourses] = useState([]);
     const [enrollments, setEnrollments] = useState([]);
+    const [streamingStudents, setStreamingStudents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterCourse, setFilterCourse] = useState('all');
@@ -33,33 +34,75 @@ const SellerStudents = () => {
     const [progressMap, setProgressMap] = useState({});
 
     useEffect(() => {
+        let active = true;
         setLoading(true);
         Promise.all([
             api.get('/lms/khoa-hoc/my-courses/'),
             api.get('/lms/dang-ky-hoc/'),
         ])
             .then(([cRes, eRes]) => {
-                setCourses(cRes.data || []);
-                setEnrollments((eRes.data || []).filter(e =>
-                    (cRes.data || []).some(c => c.id_khoa_hoc === e.id_khoa_hoc)
-                ));
+                if (!active) return;
+                const cData = cRes.data || [];
+                const eData = eRes.data || [];
+                setCourses(cData);
+                
+                const myEnrollments = eData.filter(e =>
+                    cData.some(c => c.id_khoa_hoc === e.id_khoa_hoc)
+                );
+                setEnrollments(myEnrollments);
+
+                // Group students to stream
+                const groups = myEnrollments.reduce((acc, curr) => {
+                    const uid = curr.id_nguoi_dung;
+                    if (!acc[uid]) {
+                        acc[uid] = { 
+                            id: uid, 
+                            name: curr.ho_va_ten || curr.ten_hoc_vien || `#${uid}`, 
+                            avatar: curr.hinh_anh_hoc_vien, 
+                            enrolledCourses: [] 
+                        };
+                    }
+                    const courseInfo = cData.find(c => c.id_khoa_hoc === curr.id_khoa_hoc);
+                    acc[uid].enrolledCourses.push({ ...curr, fullData: courseInfo });
+                    return acc;
+                }, {});
+
+                const list = Object.values(groups);
+                setStreamingStudents([]);
+                list.forEach((s, i) => {
+                    setTimeout(() => {
+                        if (!active) return;
+                        setStreamingStudents(prev => {
+                            if (prev.some(x => x.id === s.id)) return prev;
+                            return [...prev, s];
+                        });
+                    }, i * 120);
+                });
             })
             .catch(() => { })
-            .finally(() => setLoading(false));
+            .finally(() => {
+                if (active) setLoading(false);
+            });
+        return () => { active = false; };
     }, []);
 
     /* Group students */
     const groupedStudents = enrollments.reduce((acc, curr) => {
         const uid = curr.id_nguoi_dung;
         if (!acc[uid]) {
-            acc[uid] = { id: uid, name: curr.ten_hoc_vien || `#${uid}`, avatar: curr.hinh_anh_hoc_vien, enrolledCourses: [] };
+            acc[uid] = { 
+                id: uid, 
+                name: curr.ho_va_ten || curr.ten_hoc_vien || `#${uid}`, 
+                avatar: curr.hinh_anh_hoc_vien, 
+                enrolledCourses: [] 
+            };
         }
         const courseInfo = courses.find(c => c.id_khoa_hoc === curr.id_khoa_hoc);
         acc[uid].enrolledCourses.push({ ...curr, fullData: courseInfo });
         return acc;
     }, {});
 
-    const studentList = Object.values(groupedStudents).filter(s => {
+    const studentList = ((searchTerm || filterCourse !== 'all') ? Object.values(groupedStudents) : streamingStudents).filter(s => {
         const nameOk = s.name.toLowerCase().includes(searchTerm.toLowerCase());
         const courseOk = filterCourse === 'all' || s.enrolledCourses.some(ec => String(ec.id_khoa_hoc) === filterCourse);
         return nameOk && courseOk;
@@ -101,7 +144,7 @@ const SellerStudents = () => {
                     { icon: 'check_circle', label: 'Hoàn thành', value: totalCompleted },
                     { icon: 'trending_up', label: 'Trung bình tiến độ', value: `${avgProgress}%` },
                 ].map((stat, i) => (
-                    <div key={i} style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '12px', padding: '.75rem 1.1rem', display: 'flex', alignItems: 'center', gap: '.65rem', boxShadow: 'var(--shadow-sm)' }}>
+                    <div key={i} className="stagger-item" style={{ animationDelay: `${i * 0.1}s`, background: '#fff', border: '1px solid var(--border)', borderRadius: '12px', padding: '.75rem 1.1rem', display: 'flex', alignItems: 'center', gap: '.65rem', boxShadow: 'var(--shadow-sm)' }}>
                         <MI name={stat.icon} style={{ color: ORANGE, fontSize: '1.2rem' }} />
                         <div>
                             <div style={{ fontWeight: 800, fontSize: '1.05rem', lineHeight: 1, color: '#1e293b' }}>{stat.value}</div>
@@ -138,7 +181,11 @@ const SellerStudents = () => {
 
             {/* Student Table */}
             {loading ? (
-                <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>Đang tải...</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className="skeleton" style={{ height: 80 }} />
+                    ))}
+                </div>
             ) : studentList.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '4rem', background: '#fff', borderRadius: '14px', border: '1px solid var(--border)' }}>
                     <MI name="group_off" style={{ fontSize: '3rem', color: '#cbd5e1' }} />
@@ -146,21 +193,25 @@ const SellerStudents = () => {
                 </div>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '.75rem' }}>
-                    {studentList.map((student) => {
+                    {studentList.map((student, studentIndex) => {
                         const isExpanded = expandedStudentId === student.id;
                         // Tính overall progress của student này
                         const allProgress = student.enrolledCourses.map(ec => ec.phan_tram_hoan_thanh || 0);
                         const avgStudentProgress = allProgress.length > 0 ? Math.round(allProgress.reduce((s, v) => s + v, 0) / allProgress.length) : 0;
 
                         return (
-                            <div key={student.id} style={{
-                                background: '#fff',
-                                border: isExpanded ? `1.5px solid ${ORANGE}` : '1px solid var(--border)',
-                                borderRadius: '12px',
-                                overflow: 'hidden',
-                                boxShadow: isExpanded ? `0 4px 20px rgba(217,119,6,0.1)` : 'var(--shadow-sm)',
-                                transition: 'all .2s ease',
-                            }}>
+                            <div key={student.id} 
+                                className="stagger-item"
+                                style={{
+                                    animationDelay: '0s',
+                                    background: '#fff',
+                                    border: isExpanded ? `1.5px solid ${ORANGE}` : '1px solid var(--border)',
+                                    borderRadius: '12px',
+                                    overflow: 'hidden',
+                                    boxShadow: isExpanded ? `0 4px 20px rgba(217,119,6,0.1)` : 'var(--shadow-sm)',
+                                    transition: 'all .2s ease',
+                                }}
+                            >
                                 {/* Row header */}
                                 <div
                                     onClick={() => handleExpandToggle(student)}

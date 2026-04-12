@@ -7,13 +7,31 @@ const EMP_BLUE = 'var(--secondary)';
 
 const CourseCatalog = () => {
     const [courses, setCourses] = useState([]);
+    const [streamingCourses, setStreamingCourses] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        let isMounted = true;
         api.get('/lms/khoa-hoc/')
-            .then(res => setCourses(res.data || []))
+            .then(res => {
+                if (!isMounted) return;
+                const data = res.data || [];
+                setCourses(data);
+                
+                // Hiệu ứng streaming
+                setStreamingCourses([]);
+                data.forEach((item, index) => {
+                    setTimeout(() => {
+                        if (!isMounted) return;
+                        setStreamingCourses(prev => [...prev, item]);
+                    }, index * 30);
+                });
+            })
             .catch(err => console.error(err))
-            .finally(() => setLoading(false));
+            .finally(() => {
+                if (isMounted) setLoading(false);
+            });
+        return () => { isMounted = false; };
     }, []);
 
     return (
@@ -23,15 +41,11 @@ const CourseCatalog = () => {
                 <p style={{ color: 'var(--text-secondary)', fontSize: '.9rem' }}>Danh sách các khóa học hiện có trên hệ thống EduHKT. Bạn có thể xem lộ trình đào tạo để đánh giá chất lượng nguồn nhân lực.</p>
             </div>
 
-            {loading ? (
-                <div style={{ textAlign: 'center', padding: '4rem' }}>Đang tải danh sách khóa học...</div>
-            ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
-                    {courses.map(c => (
-                        <CourseCardNTD key={c.id_khoa_hoc} course={c} />
-                    ))}
-                </div>
-            )}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
+                {streamingCourses.map(c => (
+                    <CourseCardNTD key={c.id_khoa_hoc} course={c} />
+                ))}
+            </div>
             
             {!loading && courses.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>

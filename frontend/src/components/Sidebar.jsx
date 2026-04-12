@@ -26,8 +26,9 @@ const MI = ({ name, style, className = '' }) => {
 };
 
 const studentMenu = [
-    { icon: 'dashboard', label: 'Dashboard', path: '/dashboard' },
-    { icon: 'menu_book', label: 'Khóa học của tôi', path: '/courses' },
+    { icon: 'dashboard', label: 'Tổng quan', path: '/dashboard' },
+    { icon: 'search', label: 'Khám phá khóa học', path: '/courses/explore' },
+    { icon: 'work_outline', label: 'Cơ hội sự nghiệp', path: '/career' },
     { icon: 'chat', label: 'Tin nhắn', path: '/messages' },
     { icon: 'workspace_premium', label: 'Kho chứng chỉ', path: '/certificates' },
     { icon: 'account_circle', label: 'Hồ sơ năng lực', path: '/profile' },

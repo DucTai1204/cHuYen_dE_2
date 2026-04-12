@@ -8,6 +8,7 @@ const EMP_BLUE = 'var(--secondary)';
 
 const TalentSearch = () => {
     const [talents, setTalents] = useState([]);
+    const [streamingTalents, setStreamingTalents] = useState([]);
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
     
@@ -20,7 +21,7 @@ const TalentSearch = () => {
         ready: ''
     });
 
-    const loadTalents = () => {
+    const loadTalents = (active = { current: true }) => {
         setLoading(true);
         const params = {};
         if (filters.search) params.search = filters.search;
@@ -30,9 +31,27 @@ const TalentSearch = () => {
         if (filters.ready) params.ready = filters.ready;
 
         api.get('/lms/dang-ky-hoc/all-talent/', { params })
-            .then(res => setTalents(res.data || []))
+            .then(res => {
+                if (!active.current) return;
+                const data = res.data || [];
+                setTalents(data);
+                
+                // Hiệu ứng streaming
+                setStreamingTalents([]);
+                data.forEach((item, index) => {
+                    setTimeout(() => {
+                        if (!active.current) return;
+                        setStreamingTalents(prev => {
+                            if (prev.some(t => t.id_user === item.id_user)) return prev;
+                            return [...prev, item];
+                        });
+                    }, index * 30);
+                });
+            })
             .catch(err => console.error(err))
-            .finally(() => setLoading(false));
+            .finally(() => {
+                if (active.current) setLoading(false);
+            });
     };
 
     useEffect(() => {
@@ -43,7 +62,9 @@ const TalentSearch = () => {
     }, []);
 
     useEffect(() => {
-        loadTalents();
+        const active = { current: true };
+        loadTalents(active);
+        return () => { active.current = false; };
     }, [filters]);
 
     return (
@@ -114,10 +135,14 @@ const TalentSearch = () => {
             </div>
 
             {loading ? (
-                <div style={{ textAlign: 'center', padding: '4rem' }}>Đang tìm kiếm nhân tài phù hợp...</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                    {[1, 2, 3, 4, 5, 6].map(i => (
+                        <div key={i} className="skeleton" style={{ height: 250, borderRadius: '12px' }} />
+                    ))}
+                </div>
             ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
-                    {talents.map((t, idx) => (
+                    {(filters.search || filters.id_khoa_hoc || filters.skill || filters.level || filters.ready ? talents : streamingTalents).map((t, idx) => (
                         <TalentCard key={idx} talent={t} />
                     ))}
                 </div>

@@ -209,7 +209,9 @@ class KhoaHocListSerializer(serializers.ModelSerializer):
 class DangKyHocSerializer(serializers.ModelSerializer):
     khoa_hoc = KhoaHocListSerializer(source='id_khoa_hoc', read_only=True)
     chung_chi = ChungChiSoSerializer(many=True, read_only=True)
-
+    ho_va_ten = serializers.CharField(source='id_nguoi_dung.ho_va_ten', read_only=True)
+    ten_hoc_vien = serializers.CharField(source='id_nguoi_dung.username', read_only=True)
+    hinh_anh_hoc_vien = serializers.CharField(source='id_nguoi_dung.hinh_anh_logo', read_only=True)
 
     class Meta:
         model = DangKyHoc
