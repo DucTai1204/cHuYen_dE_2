@@ -308,11 +308,20 @@ class DangKyHocViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         vai_tro = getattr(user, 'vai_tro', '')
+        khoa_hoc_id = self.request.query_params.get('khoa_hoc')
+
         # Giảng viên xem danh sách học viên của khóa học mình dạy
         if vai_tro == 'GiangVien':
-            return self.queryset.filter(id_khoa_hoc__id_giang_vien=user)
+            qs = self.queryset.filter(id_khoa_hoc__id_giang_vien=user)
+            if khoa_hoc_id:
+                qs = qs.filter(id_khoa_hoc_id=khoa_hoc_id)
+            return qs
+
         # Mọi user khác (HocVien, QuanTri, v.v.) chỉ xem đăng ký của chính mình
-        return self.queryset.filter(id_nguoi_dung=user)
+        qs = self.queryset.filter(id_nguoi_dung=user)
+        if khoa_hoc_id:
+            qs = qs.filter(id_khoa_hoc_id=khoa_hoc_id)
+        return qs
 
     def perform_create(self, serializer):
         serializer.save(id_nguoi_dung=self.request.user)

@@ -64,7 +64,7 @@ const EnrolledCard = ({ enrollment }) => {
 
                 <div style={{ padding: '.875rem' }}>
                     <div style={{ fontSize: '.7rem', color: 'var(--text-muted)', marginBottom: '.3rem' }}>{TRINH_DO[course.trinh_do] || ''} · {course.danh_muc || ''}</div>
-                    <div style={{ fontWeight: 600, fontSize: '.875rem', marginBottom: '.5rem', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: 'var(--text-primary)' }}>
+                    <div style={{ fontWeight: 600, fontSize: '.875rem', marginBottom: '.5rem', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: 'var(--text-primary)', minHeight: '2.5rem' }}>
                         {course.ten_khoa_hoc}
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.75rem', color: 'var(--text-muted)', marginBottom: '.4rem' }}>

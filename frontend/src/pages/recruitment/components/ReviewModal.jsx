@@ -30,7 +30,7 @@ const ReviewModal = ({ talent, onClose, onReviewed }) => {
 
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-            <div className="fade-up" style={{ background: '#fff', padding: '2.5rem', borderRadius: 'var(--r-xl)', width: '100%', maxWidth: 480, boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border)', marginTop: '150px' }}>
+            <div className="fade-up" style={{ background: '#fff', padding: '2.5rem', borderRadius: 'var(--r-xl)', width: '100%', maxWidth: 480, boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border)' }}>
                 <h3 style={{ marginBottom: '1rem', fontWeight: 800, color: 'var(--secondary)' }}>Đánh giá chất lượng đào tạo</h3>
                 <p style={{ fontSize: '.9rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.5 }}>Khóa học: <strong style={{ color: 'var(--primary)' }}>{talent.ten_khoa_hoc}</strong> - Bạn thấy nội dung này có sát với thực tế tuyển dụng không?</p>
 

@@ -411,6 +411,13 @@ const SellerDashboard = () => {
     const totalRevenue = published.reduce((s, c) => s + (c.gia_tien || 0) * (c.tong_hoc_vien || 0), 0);
     const maxRev = Math.max(...published.map(c => (c.gia_tien || 0) * (c.tong_hoc_vien || 0)), 1);
     const fmtVnd = (n) => n >= 1e6 ? `${(n / 1e6).toFixed(1)}tr₫` : `${(n / 1000).toFixed(0)}k₫`;
+    
+    // Sắp xếp top doanh thu riêng để hiển thị ở sidebar (giảm dần)
+    const sortedByRevenue = [...published].sort((a, b) => {
+        const revA = (a.gia_tien || 0) * (a.tong_hoc_vien || 0);
+        const revB = (b.gia_tien || 0) * (b.tong_hoc_vien || 0);
+        return revB - revA;
+    });
 
     // Reset page khi filter/search thay đổi
     const filtered = (search || filter !== 'all' ? courses : streamingCourses).filter(c => {
@@ -424,186 +431,188 @@ const SellerDashboard = () => {
     const handleSearchChange = (val) => { setSearch(val); setPage(1); };
 
     return (
-        <div className="fade-up">
-            {/* ── HEADER ── */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <div>
-                    <h1 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--secondary)', marginBottom: '.2rem' }}>Kênh Người bán</h1>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '.85rem' }}>Quản lý khóa học, theo dõi doanh thu và học viên</p>
-                </div>
-                <Link to="/seller/courses/new">
-                    <button className="btn btn-primary" style={{ gap: '.4rem', fontSize: '.85rem' }}>
-                        <MI name="add" style={{ fontSize: '1.1rem' }} /> Tạo khóa học
-                    </button>
-                </Link>
-            </div>
-
-            {/* ── STATS STRIP ── */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-                {[
-                    { icon: 'menu_book', label: 'Tổng khóa học', value: courses.length, sub: `${published.length} đbán · ${drafts.length} nháp` },
-                    { icon: 'groups', label: 'Học viên', value: totalStudents, sub: 'Tổng đăng ký' },
-                    { icon: 'paid', label: 'Doanh thu TT', value: fmtVnd(totalRevenue), sub: 'Tạm tính' },
-                    { icon: 'account_balance_wallet', label: 'Số dư khả dụng', value: fmtVnd(totalRevenue * 0.9), sub: 'Sau phí 10%' },
-                ].map((s, i) => (
-                    <div key={i} className="stagger-item" style={{ animationDelay: `${i * 0.1}s`, background: '#fff', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem 1.25rem', boxShadow: 'var(--shadow-sm)', display: 'flex', alignItems: 'center', gap: '.85rem' }}>
-                        <div style={{ width: 40, height: 40, background: ORANGE_LIGHT, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <MI name={s.icon} style={{ fontSize: '1.3rem', color: ORANGE }} />
-                        </div>
-                        <div>
-                            <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#1e293b', lineHeight: 1 }}>{s.value}</div>
-                            <div style={{ fontSize: '.72rem', color: 'var(--text-muted)', marginTop: '.2rem' }}>{s.sub}</div>
-                        </div>
+        <>
+            <div className="fade-up">
+                {/* ── HEADER ── */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <div>
+                        <h1 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--secondary)', marginBottom: '.2rem' }}>Kênh Người bán</h1>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '.85rem' }}>Quản lý khóa học, theo dõi doanh thu và học viên</p>
                     </div>
-                ))}
-            </div>
-
-            {/* ── 2-COL LAYOUT ── */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '1.25rem' }}>
-
-                {/* Danh sách khóa học */}
-                <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '14px', boxShadow: 'var(--shadow-sm)', overflow: 'hidden' }}>
-                    {/* Toolbar */}
-                    <div style={{ display: 'flex', gap: '.75rem', padding: '1rem 1.25rem', borderBottom: '1px solid #f1f5f9', alignItems: 'center', flexWrap: 'wrap' }}>
-                        <div style={{ display: 'flex', gap: '.25rem', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: '8px', padding: '.2rem' }}>
-                            {[
-                                { val: 'all', label: `Tất cả (${courses.length})` },
-                                { val: 'pub', label: `Bán (${published.length})` },
-                                { val: 'draft', label: `Nháp (${drafts.length})` },
-                            ].map(f => (
-                                <button key={f.val} onClick={() => handleFilterChange(f.val)} style={{ padding: '.28rem .7rem', border: 'none', borderRadius: '6px', cursor: 'pointer', background: filter === f.val ? '#fff' : 'transparent', color: filter === f.val ? ORANGE_DARK : 'var(--text-secondary)', fontWeight: filter === f.val ? 700 : 400, fontSize: '.78rem', boxShadow: filter === f.val ? 'var(--shadow-sm)' : 'none', transition: 'all .15s' }}>
-                                    {f.label}
-                                </button>
-                            ))}
-                        </div>
-                        <div style={{ position: 'relative', flex: 1, minWidth: 150 }}>
-                            <MI name="search" style={{ position: 'absolute', left: '.65rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: '1rem' }} />
-                            <input
-                                value={search} onChange={e => handleSearchChange(e.target.value)}
-                                placeholder="Tìm khóa học..."
-                                style={{ width: '100%', paddingLeft: '2rem', paddingRight: '.75rem', paddingTop: '.4rem', paddingBottom: '.4rem', border: '1px solid var(--border)', borderRadius: '7px', fontSize: '.82rem', outline: 'none', background: '#fff', color: 'var(--text-primary)', fontFamily: 'inherit' }}
-                            />
-                        </div>
-                    </div>
-
-                    {/* Course list */}
-                    {loading ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                            {[1, 2, 3, 4, 5].map(i => (
-                                <div key={i} className="skeleton" style={{ height: 60, margin: '1rem' }} />
-                            ))}
-                        </div>
-                    ) : filtered.length === 0 && courses.length === 0 ? (
-                        <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
-                            <MI name="inventory_2" style={{ fontSize: '3rem', color: '#cbd5e1', marginBottom: '.75rem' }} />
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '.9rem', marginBottom: '1.25rem' }}>Bạn chưa có khóa học nào. Hãy tạo ngay!</p>
-                            <Link to="/seller/courses/new"><button className="btn btn-primary">+ Tạo khóa học ngay</button></Link>
-                        </div>
-                    ) : filtered.length === 0 ? (
-                        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Không tìm thấy kết quả</div>
-                    ) : (
-                        <div>
-                            {/* Table header */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto auto', gap: '1rem', padding: '.6rem 1.25rem', background: '#f8fafc' }}>
-                                <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Khóa học</span>
-                                <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Trạng thái</span>
-                                <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'right', minWidth: 90 }}>Doanh thu</span>
-                                <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', minWidth: 100 }}></span>
-                            </div>
-                            {paginated.map((c, i) => (
-                                <div key={c.id_khoa_hoc} className="stagger-item" style={{ animationDelay: '0s' }}>
-                                    <CourseRow course={c} onPublish={handlePublish} onUnpublish={handleUnpublish} />
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Pagination */}
-                    {totalPages > 1 && (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '.75rem 1.25rem', borderTop: '1px solid #f1f5f9', background: '#fafafa' }}>
-                            <span style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>
-                                {Math.min((page - 1) * PAGE_SIZE + 1, filtered.length)}–{Math.min(page * PAGE_SIZE, filtered.length)} / {filtered.length} khóa học
-                            </span>
-                            <div style={{ display: 'flex', gap: '.3rem' }}>
-                                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '.3rem .65rem', border: '1px solid var(--border)', borderRadius: '6px', background: page === 1 ? '#f8fafc' : '#fff', color: page === 1 ? '#cbd5e1' : '#1e293b', cursor: page === 1 ? 'default' : 'pointer', fontSize: '.8rem' }}>‹</button>
-                                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                                    const p = i + 1;
-                                    return (
-                                        <button key={p} onClick={() => setPage(p)} style={{ padding: '.3rem .65rem', border: '1px solid', borderColor: page === p ? ORANGE : 'var(--border)', borderRadius: '6px', background: page === p ? ORANGE_LIGHT : '#fff', color: page === p ? ORANGE_DARK : '#1e293b', fontWeight: page === p ? 700 : 400, cursor: 'pointer', fontSize: '.8rem' }}>{p}</button>
-                                    );
-                                })}
-                                {totalPages > 5 && <span style={{ fontSize: '.8rem', color: 'var(--text-muted)', padding: '.3rem .4rem' }}>...</span>}
-                                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: '.3rem .65rem', border: '1px solid var(--border)', borderRadius: '6px', background: page === totalPages ? '#f8fafc' : '#fff', color: page === totalPages ? '#cbd5e1' : '#1e293b', cursor: page === totalPages ? 'default' : 'pointer', fontSize: '.8rem' }}>›</button>
-                            </div>
-                        </div>
-                    )}
+                    <Link to="/seller/courses/new">
+                        <button className="btn btn-primary" style={{ gap: '.4rem', fontSize: '.85rem' }}>
+                            <MI name="add" style={{ fontSize: '1.1rem' }} /> Tạo khóa học
+                        </button>
+                    </Link>
                 </div>
 
-                {/* Sidebar Top doanh thu */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                    <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '14px', padding: '1.25rem', boxShadow: 'var(--shadow-sm)', flex: 1 }}>
-                        {/* Header với nút Chi tiết */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                            <h3 style={{ fontSize: '.9rem', fontWeight: 700, color: '#1e293b' }}>Top doanh thu</h3>
-                            <button
-                                onClick={() => setShowRevModal(true)}
-                                style={{ display: 'flex', alignItems: 'center', gap: '.3rem', padding: '.3rem .65rem', border: '1px solid var(--border)', borderRadius: '6px', background: '#f8fafc', color: 'var(--text-secondary)', fontSize: '.75rem', fontWeight: 600, cursor: 'pointer', transition: 'all .15s' }}
-                                onMouseEnter={e => { e.currentTarget.style.background = ORANGE_LIGHT; e.currentTarget.style.color = ORANGE_DARK; e.currentTarget.style.borderColor = '#fcd34d'; }}
-                                onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
-                            >
-                                <MI name="bar_chart" style={{ fontSize: '.9rem' }} /> Chi tiết
-                            </button>
+                {/* ── STATS STRIP ── */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+                    {[
+                        { icon: 'menu_book', label: 'Tổng khóa học', value: courses.length, sub: `${published.length} đbán · ${drafts.length} nháp` },
+                        { icon: 'groups', label: 'Học viên', value: totalStudents, sub: 'Tổng đăng ký' },
+                        { icon: 'paid', label: 'Doanh thu TT', value: fmtVnd(totalRevenue), sub: 'Tạm tính' },
+                        { icon: 'account_balance_wallet', label: 'Số dư khả dụng', value: fmtVnd(totalRevenue * 0.9), sub: 'Sau phí 10%' },
+                    ].map((s, i) => (
+                        <div key={i} className="stagger-item" style={{ animationDelay: `${i * 0.1}s`, background: '#fff', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem 1.25rem', boxShadow: 'var(--shadow-sm)', display: 'flex', alignItems: 'center', gap: '.85rem' }}>
+                            <div style={{ width: 40, height: 40, background: ORANGE_LIGHT, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <MI name={s.icon} style={{ fontSize: '1.3rem', color: ORANGE }} />
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#1e293b', lineHeight: 1 }}>{s.value}</div>
+                                <div style={{ fontSize: '.72rem', color: 'var(--text-muted)', marginTop: '.2rem' }}>{s.sub}</div>
+                            </div>
                         </div>
+                    ))}
+                </div>
 
-                        {published.length === 0 ? (
-                            <p style={{ fontSize: '.8rem', color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>Chưa có khóa học đang bán</p>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                {published.slice(0, 5).map((c, i) => {
-                                    const rev = (c.gia_tien || 0) * (c.tong_hoc_vien || 0);
-                                    const perc = (rev / maxRev) * 100;
-                                    return (
-                                        <div key={i}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.78rem', marginBottom: '.4rem' }}>
-                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '65%', fontWeight: 600, color: '#1e293b' }}>{c.ten_khoa_hoc}</span>
-                                                <span style={{ color: ORANGE, fontWeight: 700, flexShrink: 0 }}>{fmtVnd(rev)}</span>
-                                            </div>
-                                            <div style={{ height: 5, background: '#f1f5f9', borderRadius: '99px' }}>
-                                                <div style={{ width: `${perc}%`, height: '100%', background: ORANGE, borderRadius: '99px', transition: 'width .8s ease' }} />
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                                {published.length > 5 && (
-                                    <button onClick={() => setShowRevModal(true)} style={{ background: 'none', border: 'none', color: ORANGE, fontSize: '.78rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left', padding: 0 }}>
-                                        + {published.length - 5} khóa khác →
+                {/* ── 2-COL LAYOUT ── */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '1.25rem' }}>
+
+                    {/* Danh sách khóa học */}
+                    <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '14px', boxShadow: 'var(--shadow-sm)', overflow: 'hidden' }}>
+                        {/* Toolbar */}
+                        <div style={{ display: 'flex', gap: '.75rem', padding: '1rem 1.25rem', borderBottom: '1px solid #f1f5f9', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', gap: '.25rem', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: '8px', padding: '.2rem' }}>
+                                {[
+                                    { val: 'all', label: `Tất cả (${courses.length})` },
+                                    { val: 'pub', label: `Bán (${published.length})` },
+                                    { val: 'draft', label: `Nháp (${drafts.length})` },
+                                ].map(f => (
+                                    <button key={f.val} onClick={() => handleFilterChange(f.val)} style={{ padding: '.28rem .7rem', border: 'none', borderRadius: '6px', cursor: 'pointer', background: filter === f.val ? '#fff' : 'transparent', color: filter === f.val ? ORANGE_DARK : 'var(--text-secondary)', fontWeight: filter === f.val ? 700 : 400, fontSize: '.78rem', boxShadow: filter === f.val ? 'var(--shadow-sm)' : 'none', transition: 'all .15s' }}>
+                                        {f.label}
                                     </button>
-                                )}
+                                ))}
+                            </div>
+                            <div style={{ position: 'relative', flex: 1, minWidth: 150 }}>
+                                <MI name="search" style={{ position: 'absolute', left: '.65rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: '1rem' }} />
+                                <input
+                                    value={search} onChange={e => handleSearchChange(e.target.value)}
+                                    placeholder="Tìm khóa học..."
+                                    style={{ width: '100%', paddingLeft: '2rem', paddingRight: '.75rem', paddingTop: '.4rem', paddingBottom: '.4rem', border: '1px solid var(--border)', borderRadius: '7px', fontSize: '.82rem', outline: 'none', background: '#fff', color: 'var(--text-primary)', fontFamily: 'inherit' }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Course list */}
+                        {loading ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                                {[1, 2, 3, 4, 5].map(i => (
+                                    <div key={i} className="skeleton" style={{ height: 60, margin: '1rem' }} />
+                                ))}
+                            </div>
+                        ) : filtered.length === 0 && courses.length === 0 ? (
+                            <div style={{ padding: '4rem 2rem', textAlign: 'center' }}>
+                                <MI name="inventory_2" style={{ fontSize: '3rem', color: '#cbd5e1', marginBottom: '.75rem' }} />
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '.9rem', marginBottom: '1.25rem' }}>Bạn chưa có khóa học nào. Hãy tạo ngay!</p>
+                                <Link to="/seller/courses/new"><button className="btn btn-primary">+ Tạo khóa học ngay</button></Link>
+                            </div>
+                        ) : filtered.length === 0 ? (
+                            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Không tìm thấy kết quả</div>
+                        ) : (
+                            <div>
+                                {/* Table header - Sticky */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto auto', gap: '1rem', padding: '.6rem 1.25rem', background: '#f8fafc', position: 'sticky', top: 0, zIndex: 10, borderBottom: '1px solid #f1f5f9' }}>
+                                    <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Khóa học</span>
+                                    <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Trạng thái</span>
+                                    <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'right', minWidth: 90 }}>Doanh thu</span>
+                                    <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', minWidth: 100 }}></span>
+                                </div>
+                                {paginated.map((c, i) => (
+                                    <div key={c.id_khoa_hoc} className="stagger-item" style={{ animationDelay: '0s' }}>
+                                        <CourseRow course={c} onPublish={handlePublish} onUnpublish={handleUnpublish} />
+                                    </div>
+                                ))}
                             </div>
                         )}
 
-                        {/* Số dư summary */}
-                        <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px dashed var(--border)' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.82rem', marginBottom: '.4rem', color: 'var(--text-secondary)' }}>
-                                <span>Tổng doanh thu</span>
-                                <span style={{ fontWeight: 700, color: '#1e293b' }}>{fmtVnd(totalRevenue)}</span>
+                        {/* Pagination */}
+                        {totalPages > 1 && (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '.75rem 1.25rem', borderTop: '1px solid #f1f5f9', background: '#fafafa' }}>
+                                <span style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>
+                                    {Math.min((page - 1) * PAGE_SIZE + 1, filtered.length)}–{Math.min(page * PAGE_SIZE, filtered.length)} / {filtered.length} khóa học
+                                </span>
+                                <div style={{ display: 'flex', gap: '.3rem' }}>
+                                    <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '.3rem .65rem', border: '1px solid var(--border)', borderRadius: '6px', background: page === 1 ? '#f8fafc' : '#fff', color: page === 1 ? '#cbd5e1' : '#1e293b', cursor: page === 1 ? 'default' : 'pointer', fontSize: '.8rem' }}>‹</button>
+                                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                                        const p = i + 1;
+                                        return (
+                                            <button key={p} onClick={() => setPage(p)} style={{ padding: '.3rem .65rem', border: '1px solid', borderColor: page === p ? ORANGE : 'var(--border)', borderRadius: '6px', background: page === p ? ORANGE_LIGHT : '#fff', color: page === p ? ORANGE_DARK : '#1e293b', fontWeight: page === p ? 700 : 400, cursor: 'pointer', fontSize: '.8rem' }}>{p}</button>
+                                        );
+                                    })}
+                                    {totalPages > 5 && <span style={{ fontSize: '.8rem', color: 'var(--text-muted)', padding: '.3rem .4rem' }}>...</span>}
+                                    <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: '.3rem .65rem', border: '1px solid var(--border)', borderRadius: '6px', background: page === totalPages ? '#f8fafc' : '#fff', color: page === totalPages ? '#cbd5e1' : '#1e293b', cursor: page === totalPages ? 'default' : 'pointer', fontSize: '.8rem' }}>›</button>
+                                </div>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.82rem', color: 'var(--text-secondary)' }}>
-                                <span>Phí nền tảng (10%)</span>
-                                <span style={{ fontWeight: 600, color: '#dc2626' }}>-{fmtVnd(totalRevenue * 0.1)}</span>
+                        )}
+                    </div>
+
+                    {/* Sidebar Top doanh thu - Sticky to follow scroll */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', position: 'sticky', top: '1.5rem', alignSelf: 'start' }}>
+                        <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '14px', padding: '1.25rem', boxShadow: 'var(--shadow-sm)', flex: 1 }}>
+                            {/* Header với nút Chi tiết */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                                <h3 style={{ fontSize: '.9rem', fontWeight: 700, color: '#1e293b' }}>Top doanh thu</h3>
+                                <button
+                                    onClick={() => setShowRevModal(true)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '.3rem', padding: '.3rem .65rem', border: '1px solid var(--border)', borderRadius: '6px', background: '#f8fafc', color: 'var(--text-secondary)', fontSize: '.75rem', fontWeight: 600, cursor: 'pointer', transition: 'all .15s' }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = ORANGE_LIGHT; e.currentTarget.style.color = ORANGE_DARK; e.currentTarget.style.borderColor = '#fcd34d'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+                                >
+                                    <MI name="bar_chart" style={{ fontSize: '.9rem' }} /> Chi tiết
+                                </button>
                             </div>
-                            <div style={{ marginTop: '.75rem', padding: '.6rem .75rem', background: '#ecfdf5', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '.8rem', fontWeight: 700, color: '#065f46' }}>Nhận về ước tính</span>
-                                <span style={{ fontWeight: 800, color: '#059669', fontSize: '.95rem' }}>{fmtVnd(totalRevenue * 0.9)}</span>
+
+                            {sortedByRevenue.length === 0 ? (
+                                <p style={{ fontSize: '.8rem', color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>Chưa có khóa học đang bán</p>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    {sortedByRevenue.slice(0, 5).map((c, i) => {
+                                        const rev = (c.gia_tien || 0) * (c.tong_hoc_vien || 0);
+                                        const perc = (rev / maxRev) * 100;
+                                        return (
+                                            <div key={i}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.78rem', marginBottom: '.4rem' }}>
+                                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '65%', fontWeight: 600, color: '#1e293b' }}>{c.ten_khoa_hoc}</span>
+                                                    <span style={{ color: ORANGE, fontWeight: 700, flexShrink: 0 }}>{fmtVnd(rev)}</span>
+                                                </div>
+                                                <div style={{ height: 5, background: '#f1f5f9', borderRadius: '99px' }}>
+                                                    <div style={{ width: `${perc}%`, height: '100%', background: ORANGE, borderRadius: '99px', transition: 'width .8s ease' }} />
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                    {sortedByRevenue.length > 5 && (
+                                        <button onClick={() => setShowRevModal(true)} style={{ background: 'none', border: 'none', color: ORANGE, fontSize: '.78rem', fontWeight: 600, cursor: 'pointer', textAlign: 'left', padding: 0 }}>
+                                            + {sortedByRevenue.length - 5} khóa khác →
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Số dư summary */}
+                            <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px dashed var(--border)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.82rem', marginBottom: '.4rem', color: 'var(--text-secondary)' }}>
+                                    <span>Tổng doanh thu</span>
+                                    <span style={{ fontWeight: 700, color: '#1e293b' }}>{fmtVnd(totalRevenue)}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.82rem', color: 'var(--text-secondary)' }}>
+                                    <span>Phí nền tảng (10%)</span>
+                                    <span style={{ fontWeight: 600, color: '#dc2626' }}>-{fmtVnd(totalRevenue * 0.1)}</span>
+                                </div>
+                                <div style={{ marginTop: '.75rem', padding: '.6rem .75rem', background: '#ecfdf5', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '.8rem', fontWeight: 700, color: '#065f46' }}>Nhận về ước tính</span>
+                                    <span style={{ fontWeight: 800, color: '#059669', fontSize: '.95rem' }}>{fmtVnd(totalRevenue * 0.9)}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {toast && <Toast msg={toast.msg} type={toast.type} />}
+                {toast && <Toast msg={toast.msg} type={toast.type} />}
+            </div>
             {showRevModal && <RevenueModal courses={courses} onClose={() => setShowRevModal(false)} />}
-        </div>
+        </>
     );
 };
 

@@ -263,13 +263,14 @@ const CourseDetail = () => {
     );
 
     return (
-        <div className="fade-up">
-            {/* ── BREADCRUMB ── */}
-            <div style={{ display: 'flex', gap: '.4rem', alignItems: 'center', fontSize: '.8rem', color: 'var(--text-muted)', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                <Link to="/dashboard" style={{ color: 'var(--text-muted)' }}>Trang chủ</Link> ›
-                <Link to="/dashboard" style={{ color: 'var(--text-muted)' }}>Khóa học</Link> ›
-                <span style={{ color: 'var(--text-primary)' }}>{course.ten_khoa_hoc}</span>
-            </div>
+        <>
+            <div className="fade-up">
+                {/* ── BREADCRUMB ── */}
+                <div style={{ display: 'flex', gap: '.4rem', alignItems: 'center', fontSize: '.8rem', color: 'var(--text-muted)', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                    <Link to="/dashboard" style={{ color: 'var(--text-muted)' }}>Trang chủ</Link> ›
+                    <Link to="/dashboard" style={{ color: 'var(--text-muted)' }}>Khóa học</Link> ›
+                    <span style={{ color: 'var(--text-primary)' }}>{course.ten_khoa_hoc}</span>
+                </div>
 
             {/* ── BADGES ── */}
             <div style={{ display: 'flex', gap: '.5rem', marginBottom: '.75rem', flexWrap: 'wrap' }}>
@@ -744,8 +745,9 @@ const CourseDetail = () => {
                     </div>
                 </div>
             </div>
+        </div>
 
-            {/* ── TOAST ── */}
+        {/* ── TOAST ── */}
             {toast && (
                 <div style={{
                     position: 'fixed', bottom: '1.5rem', right: '1.5rem',
@@ -760,7 +762,7 @@ const CourseDetail = () => {
             )}
 
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        </div>
+        </>
     );
 };
 

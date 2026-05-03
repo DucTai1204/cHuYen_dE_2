@@ -98,7 +98,7 @@ const CertificatesPage = () => {
                                     <div style={{ fontSize: '.7rem', color: '#3b82f6', fontWeight: 800, letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: '.5rem' }}>
                                         Blockchain EdunChain
                                     </div>
-                                    <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#1e293b', marginBottom: '1rem', lineHeight: 1.4 }}>
+                                    <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#1e293b', marginBottom: '1rem', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: '2.8rem' }}>
                                         {course?.ten_khoa_hoc}
                                     </h3>
 

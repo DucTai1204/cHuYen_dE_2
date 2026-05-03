@@ -736,59 +736,97 @@ const StudentsTab = ({ courseId }) => {
             .finally(() => setLoading(false));
     }, [courseId]);
 
-    if (loading) return <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>⏳ Đang tải...</div>;
+    if (loading) return (
+        <div style={{ padding: '4rem', textAlign: 'center' }}>
+            <div className="skeleton" style={{ height: 40, width: '60%', margin: '0 auto 1rem' }} />
+            <div className="skeleton" style={{ height: 120, borderRadius: '12px' }} />
+        </div>
+    );
 
     if (students.length === 0) return (
-        <div style={{ textAlign: 'center', padding: '4rem 2rem', color: 'var(--text-muted)' }}>
-            <MI name="groups" style={{ fontSize: '3rem', color: '#cbd5e1' }} />
-            <div style={{ fontWeight: 600, fontSize: '1rem', marginBottom: '.5rem', marginTop: '1rem' }}>Chưa có học viên</div>
-            <div style={{ fontSize: '.875rem' }}>Hãy đăng bán khóa học để thu hút học viên!</div>
+        <div style={{ textAlign: 'center', padding: '5rem 2rem', background: '#fff', borderRadius: '16px', border: '1px solid var(--border)' }}>
+            <div style={{ width: 64, height: 64, background: '#f1f5f9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+                <MI name="group_off" style={{ fontSize: '2rem', color: '#94a3b8' }} />
+            </div>
+            <h3 style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--secondary)', marginBottom: '.5rem' }}>Chưa có học viên nào</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '.875rem', maxWidth: 300, margin: '0 auto' }}>
+                Khóa học của bạn hiện chưa có lượt đăng ký nào. Hãy đảm bảo khóa học đã được đăng bán!
+            </p>
         </div>
     );
 
     return (
-        <div>
-            <div style={{ marginBottom: '1rem', fontSize: '.875rem', color: 'var(--text-secondary)' }}>
-                Tổng cộng <strong>{students.length}</strong> học viên đã đăng ký
+        <div className="fade-up">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                <div>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--secondary)' }}>Danh sách học viên</h3>
+                    <p style={{ fontSize: '.8rem', color: 'var(--text-muted)' }}>Tổng cộng {students.length} người đang theo học</p>
+                </div>
             </div>
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+
+            <div style={{ background: '#fff', borderRadius: '14px', border: '1px solid var(--border)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                        <tr style={{ background: 'var(--bg-app)' }}>
-                            {['Học viên', 'Tiến độ', 'Trạng thái', 'Ngày đăng ký'].map((h, i) => (
-                                <th key={i} style={{ padding: '.6rem 1rem', textAlign: 'left', fontSize: '.78rem', fontWeight: 600, color: 'var(--text-muted)' }}>{h}</th>
-                            ))}
+                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid var(--border)' }}>
+                            <th style={{ padding: '1rem 1.25rem', textAlign: 'left', fontSize: '.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Học viên</th>
+                            <th style={{ padding: '1rem 1.25rem', textAlign: 'left', fontSize: '.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Tiến độ</th>
+                            <th style={{ padding: '1rem 1.25rem', textAlign: 'left', fontSize: '.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Trạng thái</th>
+                            <th style={{ padding: '1rem 1.25rem', textAlign: 'right', fontSize: '.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Ngày tham gia</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {students.map(s => (
-                            <tr key={s.id_dang_ky} style={{ borderBottom: '1px solid var(--border)' }}>
-                                <td style={{ padding: '.75rem 1rem', fontSize: '.875rem', fontWeight: 500 }}>
-                                    {s.ho_va_ten || s.ten_hoc_vien || `HV #${s.id_nguoi_dung}`}
-                                </td>
-                                <td style={{ padding: '.75rem 1rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                                        <div style={{ flex: 1, height: 6, background: 'var(--bg-app)', borderRadius: '99px', overflow: 'hidden' }}>
-                                            <div style={{ height: '100%', width: `${s.phan_tram_hoan_thanh || 0}%`, background: SELLER_ORANGE, borderRadius: '99px' }} />
+                        {students.map((s, idx) => {
+                            const name = s.ho_va_ten || s.ten_hoc_vien || `Học viên #${s.id_nguoi_dung}`;
+                            const avatar = s.hinh_anh_hoc_vien;
+                            const pct = Math.round(s.phan_tram_hoan_thanh || 0);
+                            
+                            return (
+                                <tr key={s.id_dang_ky} style={{ borderBottom: idx === students.length - 1 ? 'none' : '1px solid #f1f5f9', transition: 'background .2s' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = '#fffbeb'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                >
+                                    <td style={{ padding: '.85rem 1.25rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
+                                            <div style={{ 
+                                                width: 36, height: 36, borderRadius: '10px', flexShrink: 0,
+                                                background: avatar ? 'transparent' : 'linear-gradient(135deg, #fef3c7, #fde68a)',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontWeight: 800, fontSize: '.85rem', color: SELLER_ORANGE, overflow: 'hidden',
+                                                border: '1px solid #fde68a'
+                                            }}>
+                                                {avatar ? <img src={avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : name[0].toUpperCase()}
+                                            </div>
+                                            <div>
+                                                <div style={{ fontWeight: 700, fontSize: '.875rem', color: '#1e293b' }}>{name}</div>
+                                                <div style={{ fontSize: '.7rem', color: 'var(--text-muted)' }}>ID: #{s.id_nguoi_dung}</div>
+                                            </div>
                                         </div>
-                                        <span style={{ fontSize: '.78rem', color: 'var(--text-muted)', flexShrink: 0 }}>{Math.round(s.phan_tram_hoan_thanh || 0)}%</span>
-                                    </div>
-                                </td>
-                                <td style={{ padding: '.75rem 1rem' }}>
-                                    <span style={{
-                                        display: 'inline-flex', alignItems: 'center', gap: '.3rem', padding: '.2rem .6rem',
-                                        borderRadius: '99px', fontSize: '.72rem', fontWeight: 600,
-                                        background: s.trang_thai_hoc === 'DaXong' ? '#ecfdf5' : s.trang_thai_hoc === 'Huy' ? '#fef2f2' : '#eff6ff',
-                                        color: s.trang_thai_hoc === 'DaXong' ? '#059669' : s.trang_thai_hoc === 'Huy' ? '#dc2626' : '#2563eb',
-                                    }}>
-                                        {s.trang_thai_hoc === 'DaXong' ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.2rem' }}><MI name="check_circle" style={{ fontSize: '1rem', color: '#059669' }} /> Hoàn thành</span> : s.trang_thai_hoc === 'Huy' ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.2rem' }}><MI name="cancel" style={{ fontSize: '1rem', color: '#dc2626' }} /> Đã hủy</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.2rem' }}><MI name="menu_book" style={{ fontSize: '1rem', color: '#2563eb' }} /> Đang học</span>}
-                                    </span>
-                                </td>
-                                <td style={{ padding: '.75rem 1rem', fontSize: '.82rem', color: 'var(--text-secondary)' }}>
-                                    {new Date(s.ngay_dang_ky).toLocaleDateString('vi-VN')}
-                                </td>
-                            </tr>
-                        ))}
+                                    </td>
+                                    <td style={{ padding: '.85rem 1.25rem', minWidth: 150 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '.65rem' }}>
+                                            <div style={{ flex: 1, height: 6, background: '#f1f5f9', borderRadius: '99px', overflow: 'hidden' }}>
+                                                <div style={{ height: '100%', width: `${pct}%`, background: pct >= 100 ? '#059669' : SELLER_ORANGE, borderRadius: '99px', transition: 'width .6s ease' }} />
+                                            </div>
+                                            <span style={{ fontSize: '.75rem', fontWeight: 700, color: pct >= 100 ? '#059669' : '#1e293b', width: 35, textAlign: 'right' }}>{pct}%</span>
+                                        </div>
+                                    </td>
+                                    <td style={{ padding: '.85rem 1.25rem' }}>
+                                        <span style={{
+                                            display: 'inline-flex', alignItems: 'center', gap: '.3rem', padding: '.2rem .65rem',
+                                            borderRadius: '99px', fontSize: '.68rem', fontWeight: 700,
+                                            background: s.trang_thai_hoc === 'DaXong' ? '#ecfdf5' : s.trang_thai_hoc === 'Huy' ? '#fef2f2' : '#eff6ff',
+                                            color: s.trang_thai_hoc === 'DaXong' ? '#059669' : s.trang_thai_hoc === 'Huy' ? '#dc2626' : '#2563eb',
+                                        }}>
+                                            <MI name={s.trang_thai_hoc === 'DaXong' ? 'check_circle' : s.trang_thai_hoc === 'Huy' ? 'cancel' : 'auto_stories'} style={{ fontSize: '.9rem' }} />
+                                            {s.trang_thai_hoc === 'DaXong' ? 'Hoàn thành' : s.trang_thai_hoc === 'Huy' ? 'Đã hủy' : 'Đang học'}
+                                        </span>
+                                    </td>
+                                    <td style={{ padding: '.85rem 1.25rem', textAlign: 'right', fontSize: '.8rem', color: 'var(--text-muted)' }}>
+                                        {new Date(s.ngay_dang_ky).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                    </td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>

@@ -476,207 +476,184 @@ const LessonView = () => {
     );
 
     return (
-        <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 3.5rem)', overflow: 'hidden' }}>
+        <>
+            <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 3.5rem)', overflow: 'hidden' }}>
 
-            {/* ── TOP BAR ── */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '.6rem 1rem', background: '#1e293b', color: '#fff', flexShrink: 0, zIndex: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
-                    <button
-                        onClick={() => setSidebarOpen(o => !o)}
-                        style={{ background: 'rgba(255,255,255,.12)', border: 'none', color: '#fff', width: 36, height: 36, borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .2s' }}
-                        title="Ẩn/Hiện danh sách bài"
-                    >
-                        <span className="material-icons" style={{ fontSize: '1.25rem' }}>{sidebarOpen ? 'menu_open' : 'menu'}</span>
-                    </button>
-                    <Link to={`/courses/${courseId}`} style={{ color: 'rgba(255,255,255,.7)', fontSize: '.85rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span className="material-icons" style={{ fontSize: '1.1rem' }}>arrow_back</span>
-                        <span style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{course?.ten_khoa_hoc}</span>
-                    </Link>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '.82rem' }}>
-                    {course?.is_sequential && (
-                        <span style={{ background: 'rgba(251,191,36,.2)', color: '#fbbf24', padding: '.2rem .6rem', borderRadius: '99px', fontSize: '.72rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                            <span className="material-icons" style={{ fontSize: '.9rem' }}>lock_clock</span> Học tuần tự
-                        </span>
-                    )}
-                    <span style={{ color: 'rgba(255,255,255,.7)' }}>Tiến độ: <strong style={{ color: '#34d399' }}>{Math.round(pct)}%</strong></span>
-                    <div style={{ width: 80, height: 5, background: 'rgba(255,255,255,.2)', borderRadius: '99px', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${pct}%`, background: '#34d399', borderRadius: '99px', transition: 'width .5s' }} />
-                    </div>
-                    {pct >= 100 && (
+                {/* ── TOP BAR ── */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '.6rem 1rem', background: '#1e293b', color: '#fff', flexShrink: 0, zIndex: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
                         <button
-                            onClick={() => {
-                                const cert = enrollment?.chung_chi?.[0];
-                                if (cert) {
-                                    navigate(`/verify/${cert.ma_uuid_chung_chi}`);
-                                } else {
-
-                                    showToast('Chứng chỉ đang được khởi tạo, vui lòng đợi giây lát...', 'info');
-                                }
-                            }}
-                            style={{
-                                background: 'linear-gradient(135deg, #10b981, #059669)',
-                                color: '#fff', border: 'none', padding: '.4rem .8rem',
-                                borderRadius: '8px', fontSize: '.75rem', fontWeight: 700,
-                                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
-                                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
-                            }}
+                            onClick={() => setSidebarOpen(o => !o)}
+                            style={{ background: 'rgba(255,255,255,.12)', border: 'none', color: '#fff', width: 36, height: 36, borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all .2s' }}
+                            title="Ẩn/Hiện danh sách bài"
                         >
-                            <span className="material-icons" style={{ fontSize: '1rem' }}>workspace_premium</span>
-                            XEM CHỨNG CHỈ
+                            <span className="material-icons" style={{ fontSize: '1.25rem' }}>{sidebarOpen ? 'menu_open' : 'menu'}</span>
                         </button>
-                    )}
-                </div>
-
-            </div>
-
-            {/* ── BODY (Sidebar + Content) ── */}
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-
-                {/* ── Sidebar (danh sách bài học) ── */}
-                <div style={{
-                    width: sidebarOpen ? 320 : 0,
-                    flexShrink: 0,
-                    background: '#0f172a',
-                    color: '#e2e8f0',
-                    overflowY: 'auto',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    borderRight: sidebarOpen ? '1px solid rgba(255,255,255,.1)' : 'none',
-                    opacity: sidebarOpen ? 1 : 0,
-                    visibility: sidebarOpen ? 'visible' : 'hidden'
-                }}>
-                    <div style={{ padding: '1rem', fontSize: '.75rem', color: '#94a3b8', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,.08)', textTransform: 'uppercase', letterSpacing: '.08em', whiteSpace: 'nowrap' }}>
-                        Nội dung khóa học
+                        <Link to={`/courses/${courseId}`} style={{ color: 'rgba(255,255,255,.7)', fontSize: '.85rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span className="material-icons" style={{ fontSize: '1.1rem' }}>arrow_back</span>
+                            <span style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{course?.ten_khoa_hoc}</span>
+                        </Link>
                     </div>
-                    {chapters.map((ch, ci) => (
-                        <div key={ch.id_chuong} style={{ whiteSpace: 'nowrap' }}>
-                            <div style={{ padding: '.75rem 1rem', fontSize: '.8rem', fontWeight: 700, color: '#64748b', background: 'rgba(255,255,255,.03)', borderBottom: '1px solid rgba(255,255,255,.06)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span className="material-icons" style={{ fontSize: '1.2rem' }}>folder</span> {ci + 1}. {ch.ten_chuong}
-                            </div>
-                            {(ch.bai_giang || []).map((l) => {
-                                const locked = isLocked(l);
-                                const done = completedIds.has(l.id_bai_giang);
-                                const active = currentLesson?.id_bai_giang === l.id_bai_giang;
-                                return (
-                                    <button
-                                        key={l.id_bai_giang}
-                                        onClick={() => handleSelectLesson(l)}
-                                        style={{
-                                            width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '.75rem',
-                                            padding: '.75rem 1rem .75rem 1.5rem', border: 'none', cursor: locked ? 'not-allowed' : 'pointer',
-                                            background: active ? 'rgba(59,130,246,.18)' : 'transparent',
-                                            borderLeft: active ? '4px solid #3b82f6' : '4px solid transparent',
-                                            color: locked ? '#475569' : active ? '#fff' : '#cbd5e1', fontSize: '.85rem',
-                                            transition: 'all .2s',
-                                            whiteSpace: 'nowrap',
-                                            overflow: 'hidden'
-                                        }}
-                                    >
-                                        <span className="material-icons" style={{
-                                            fontSize: '1.2rem',
-                                            color: done ? '#10b981' : locked ? '#475569' : active ? '#3b82f6' : '#64748b'
-                                        }}>
-                                            {done ? 'check_circle' : locked ? 'lock' : TYPE_ICON[l.loai_bai] || 'play_circle'}
-                                        </span>
-                                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.ten_bai_giang}</span>
-                                        {l.thoi_luong_phut > 0 && (
-                                            <span style={{ color: '#475569', fontSize: '.7rem' }}>{l.thoi_luong_phut}p</span>
-                                        )}
-                                    </button>
-                                );
-                            })}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '.82rem' }}>
+                        {course?.is_sequential && (
+                            <span style={{ background: 'rgba(251,191,36,.2)', color: '#fbbf24', padding: '.2rem .6rem', borderRadius: '99px', fontSize: '.72rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <span className="material-icons" style={{ fontSize: '.9rem' }}>lock_clock</span> Học tuần tự
+                            </span>
+                        )}
+                        <span style={{ color: 'rgba(255,255,255,.7)' }}>Tiến độ: <strong style={{ color: '#34d399' }}>{Math.round(pct)}%</strong></span>
+                        <div style={{ width: 80, height: 5, background: 'rgba(255,255,255,.2)', borderRadius: '99px', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${pct}%`, background: '#34d399', borderRadius: '99px', transition: 'width .5s' }} />
                         </div>
-                    ))}
+                        {pct >= 100 && (
+                            <button
+                                onClick={() => {
+                                    const cert = enrollment?.chung_chi?.[0];
+                                    if (cert) {
+                                        navigate(`/verify/${cert.ma_uuid_chung_chi}`);
+                                    } else {
+                                        showToast('Chứng chỉ đang được khởi tạo, vui lòng đợi giây lát...', 'info');
+                                    }
+                                }}
+                                style={{
+                                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                                    color: '#fff', border: 'none', padding: '.4rem .8rem',
+                                    borderRadius: '8px', fontSize: '.75rem', fontWeight: 700,
+                                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+                                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                                }}
+                            >
+                                <span className="material-icons" style={{ fontSize: '1rem' }}>workspace_premium</span>
+                                XEM CHỨNG CHỈ
+                            </button>
+                        )}
+                    </div>
                 </div>
 
-                {/* ── Vùng nội dung bài học ── */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem 1.5rem', background: '#f8fafc' }}>
-                    {!currentLesson ? (
-                        <div style={{ textAlign: 'center', padding: '5rem 2rem', color: 'var(--text-muted)' }}>
-                            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📚</div>
-                            <div style={{ fontWeight: 600 }}>Chọn một bài học để bắt đầu</div>
+                {/* ── BODY (Sidebar + Content) ── */}
+                <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+                    <div style={{
+                        width: sidebarOpen ? 320 : 0,
+                        flexShrink: 0,
+                        background: '#0f172a',
+                        color: '#e2e8f0',
+                        overflowY: 'auto',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        borderRight: sidebarOpen ? '1px solid rgba(255,255,255,.1)' : 'none',
+                        opacity: sidebarOpen ? 1 : 0,
+                        visibility: sidebarOpen ? 'visible' : 'hidden'
+                    }}>
+                        <div style={{ padding: '1rem', fontSize: '.75rem', color: '#94a3b8', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,.08)', textTransform: 'uppercase', letterSpacing: '.08em', whiteSpace: 'nowrap' }}>
+                            Nội dung khóa học
                         </div>
-                    ) : (
-                        <div style={{ maxWidth: 820, margin: '0 auto' }}>
-                            {/* Lesson header */}
-                            <div style={{ marginBottom: '1rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', fontSize: '.78rem', color: 'var(--text-muted)', marginBottom: '.35rem' }}>
-                                    <span>{currentLesson._chapter}</span>
-                                    <span>›</span>
-                                    <span style={{ background: '#eff6ff', color: '#2563eb', padding: '.1rem .4rem', borderRadius: '4px', fontWeight: 600 }}>
-                                        {TYPE_LABEL[currentLesson.loai_bai] || currentLesson.loai_bai}
-                                    </span>
-                                    {completedIds.has(currentLesson.id_bai_giang) && (
-                                        <span style={{ background: '#f0fdf4', color: '#059669', padding: '.1rem .5rem', borderRadius: '4px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                                            <span className="material-icons" style={{ fontSize: '.9rem' }}>check_circle</span> Đã hoàn thành
-                                        </span>
-                                    )}
+                        {chapters.map((ch, ci) => (
+                            <div key={ch.id_chuong} style={{ whiteSpace: 'nowrap' }}>
+                                <div style={{ padding: '.75rem 1rem', fontSize: '.8rem', fontWeight: 700, color: '#64748b', background: 'rgba(255,255,255,.03)', borderBottom: '1px solid rgba(255,255,255,.06)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span className="material-icons" style={{ fontSize: '1.2rem' }}>folder</span> {ci + 1}. {ch.ten_chuong}
                                 </div>
-                                <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.35 }}>
-                                    {currentLesson.ten_bai_giang}
-                                </h1>
+                                {(ch.bai_giang || []).map((l) => {
+                                    const locked = isLocked(l);
+                                    const done = completedIds.has(l.id_bai_giang);
+                                    const active = currentLesson?.id_bai_giang === l.id_bai_giang;
+                                    return (
+                                        <button
+                                            key={l.id_bai_giang}
+                                            onClick={() => handleSelectLesson(l)}
+                                            style={{
+                                                width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '.75rem',
+                                                padding: '.75rem 1rem .75rem 1.5rem', border: 'none', cursor: locked ? 'not-allowed' : 'pointer',
+                                                background: active ? 'rgba(59,130,246,.18)' : 'transparent',
+                                                borderLeft: active ? '4px solid #3b82f6' : '4px solid transparent',
+                                                color: locked ? '#475569' : active ? '#fff' : '#cbd5e1', fontSize: '.85rem',
+                                                transition: 'all .2s',
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden'
+                                            }}
+                                        >
+                                            <span className="material-icons" style={{
+                                                fontSize: '1.2rem',
+                                                color: done ? '#10b981' : locked ? '#475569' : active ? '#3b82f6' : '#64748b'
+                                            }}>
+                                                {done ? 'check_circle' : locked ? 'lock' : TYPE_ICON[l.loai_bai] || 'play_circle'}
+                                            </span>
+                                            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.ten_bai_giang}</span>
+                                            {l.thoi_luong_phut > 0 && (
+                                                <span style={{ color: '#475569', fontSize: '.7rem' }}>{l.thoi_luong_phut}p</span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
                             </div>
+                        ))}
+                    </div>
 
-                            {/* Content by type */}
-                            {currentLesson.loai_bai === 'Video' && (
-                                <VideoPlayer lesson={currentLesson} onComplete={handleComplete} />
-                            )}
-                            {(currentLesson.loai_bai === 'TaiLieu' || currentLesson.loai_bai === 'VanBan') && (
-                                <TextViewer lesson={currentLesson} onComplete={handleComplete} />
-                            )}
-                            {currentLesson.loai_bai === 'Quiz' && (
-                                <QuizViewer lesson={currentLesson} onComplete={handleComplete} />
-                            )}
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem 1.5rem', background: '#f8fafc' }}>
+                        {!currentLesson ? (
+                            <div style={{ textAlign: 'center', padding: '5rem 2rem', color: 'var(--text-muted)' }}>
+                                <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📚</div>
+                                <div style={{ fontWeight: 600 }}>Chọn một bài học để bắt đầu</div>
+                            </div>
+                        ) : (
+                            <div style={{ maxWidth: 820, margin: '0 auto' }}>
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', fontSize: '.78rem', color: 'var(--text-muted)', marginBottom: '.35rem' }}>
+                                        <span>{currentLesson._chapter}</span>
+                                        <span>›</span>
+                                        <span style={{ background: '#eff6ff', color: '#2563eb', padding: '.1rem .4rem', borderRadius: '4px', fontWeight: 600 }}>
+                                            {TYPE_LABEL[currentLesson.loai_bai] || currentLesson.loai_bai}
+                                        </span>
+                                        {completedIds.has(currentLesson.id_bai_giang) && (
+                                            <span style={{ background: '#f0fdf4', color: '#059669', padding: '.1rem .5rem', borderRadius: '4px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                                <span className="material-icons" style={{ fontSize: '.9rem' }}>check_circle</span> Đã hoàn thành
+                                            </span>
+                                        )}
+                                    </div>
+                                    <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.35 }}>
+                                        {currentLesson.ten_bai_giang}
+                                    </h1>
+                                </div>
 
-                            {/* Navigation buttons */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem', gap: '1rem' }}>
-                                <button
-                                    onClick={() => currentIdx > 0 && handleSelectLesson(flatLessons[currentIdx - 1])}
-                                    disabled={currentIdx <= 0}
-                                    style={{ padding: '.65rem 1.2rem', background: currentIdx > 0 ? '#fff' : '#f1f5f9', color: currentIdx > 0 ? 'var(--text-primary)' : '#94a3b8', border: '1px solid var(--border)', borderRadius: '10px', cursor: currentIdx > 0 ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: '.875rem', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                >
-                                    <span className="material-icons" style={{ fontSize: '1.2rem' }}>navigate_before</span> Bài trước
-                                </button>
-
-                                {!completedIds.has(currentLesson.id_bai_giang) && currentLesson.loai_bai !== 'Video' && currentLesson.loai_bai !== 'Quiz' && (
-                                    <button
-                                        onClick={handleComplete}
-                                        disabled={completing}
-                                        style={{ padding: '.65rem 1.5rem', background: '#10b981', color: '#fff', border: 'none', borderRadius: '10px', cursor: completing ? 'wait' : 'pointer', fontWeight: 700, fontSize: '.875rem', display: 'flex', alignItems: 'center', gap: '8px' }}
-                                    >
-                                        <span className="material-icons" style={{ fontSize: '1.2rem' }}>{completing ? 'sync' : 'check_circle'}</span>
-                                        {completing ? 'Đang lưu...' : 'Hoàn thành bài học'}
-                                    </button>
+                                {currentLesson.loai_bai === 'Video' && (
+                                    <VideoPlayer lesson={currentLesson} onComplete={handleComplete} />
+                                )}
+                                {(currentLesson.loai_bai === 'TaiLieu' || currentLesson.loai_bai === 'VanBan') && (
+                                    <TextViewer lesson={currentLesson} onComplete={handleComplete} />
+                                )}
+                                {currentLesson.loai_bai === 'Quiz' && (
+                                    <QuizViewer lesson={currentLesson} onComplete={handleComplete} />
                                 )}
 
-                                <button
-                                    onClick={() => currentIdx < flatLessons.length - 1 && handleSelectLesson(flatLessons[currentIdx + 1])}
-                                    disabled={currentIdx >= flatLessons.length - 1}
-                                    style={{ padding: '.65rem 1.2rem', background: currentIdx < flatLessons.length - 1 ? '#2563eb' : '#fff', color: currentIdx < flatLessons.length - 1 ? '#fff' : '#cbd1d8', border: '1px solid var(--border)', borderRadius: '10px', cursor: currentIdx < flatLessons.length - 1 ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: '.875rem', display: 'flex', alignItems: 'center', gap: '6px' }}
-                                >
-                                    Bài tiếp <span className="material-icons" style={{ fontSize: '1.2rem' }}>navigate_next</span>
-                                </button>
-                            </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem', gap: '1rem' }}>
+                                    <button
+                                        onClick={() => currentIdx > 0 && handleSelectLesson(flatLessons[currentIdx - 1])}
+                                        disabled={currentIdx <= 0}
+                                        style={{ padding: '.65rem 1.2rem', background: currentIdx > 0 ? '#fff' : '#f1f5f9', color: currentIdx > 0 ? 'var(--text-primary)' : '#94a3b8', border: '1px solid var(--border)', borderRadius: '10px', cursor: currentIdx > 0 ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: '.875rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                    >
+                                        <span className="material-icons" style={{ fontSize: '1.2rem' }}>navigate_before</span> Bài trước
+                                    </button>
 
-                            {/* ── BẢNG DEBUG CONSOLE (Sẽ ẩn sau này) ── 
-                            <div style={{ marginTop: '3rem', padding: '1rem', background: '#1e293b', color: '#34d399', borderRadius: '10px', fontFamily: 'monospace', fontSize: '.75rem', border: '2px solid #334155' }}>
-                                <div style={{ borderBottom: '1px solid #334155', paddingBottom: '.5rem', marginBottom: '.5rem', display: 'flex', justifyContent: 'space-between' }}>
-                                    <span>💻 SYSTEM DEBUG CONSOLE</span>
-                                    <span style={{ color: '#94a3b8' }}>{new Date().toLocaleTimeString()}</span>
+                                    {!completedIds.has(currentLesson.id_bai_giang) && currentLesson.loai_bai !== 'Video' && currentLesson.loai_bai !== 'Quiz' && (
+                                        <button
+                                            onClick={handleComplete}
+                                            disabled={completing}
+                                            style={{ padding: '.65rem 1.5rem', background: '#10b981', color: '#fff', border: 'none', borderRadius: '10px', cursor: completing ? 'wait' : 'pointer', fontWeight: 700, fontSize: '.875rem', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                        >
+                                            <span className="material-icons" style={{ fontSize: '1.2rem' }}>{completing ? 'sync' : 'check_circle'}</span>
+                                            {completing ? 'Đang lưu...' : 'Hoàn thành bài học'}
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => currentIdx < flatLessons.length - 1 && handleSelectLesson(flatLessons[currentIdx + 1])}
+                                        disabled={currentIdx >= flatLessons.length - 1}
+                                        style={{ padding: '.65rem 1.2rem', background: currentIdx < flatLessons.length - 1 ? '#2563eb' : '#fff', color: currentIdx < flatLessons.length - 1 ? '#fff' : '#cbd1d8', border: '1px solid var(--border)', borderRadius: '10px', cursor: currentIdx < flatLessons.length - 1 ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: '.875rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                    >
+                                        Bài tiếp <span className="material-icons" style={{ fontSize: '1.2rem' }}>navigate_next</span>
+                                    </button>
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '.5rem' }}>
-                                    <span style={{ color: '#94a3b8' }}>Lesson ID:</span> <span>{currentLesson.id_bai_giang}</span>
-                                    <span style={{ color: '#94a3b8' }}>Type:</span> <span>{currentLesson.loai_bai}</span>
-                                    <span style={{ color: '#94a3b8' }}>Source URL:</span> <span style={{ color: '#fbbf24', wordBreak: 'break-all' }}>{currentLesson.noi_dung_url}</span>
-                                    <span style={{ color: '#94a3b8' }}>Course ID:</span> <span>{courseId}</span>
-                                    <span style={{ color: '#94a3b8' }}>Chapters:</span> <span>{chapters.length} loaded</span>
-                                    <span style={{ color: '#94a3b8' }}>Enrollment:</span> <span>{enrollment ? '✅ OK' : '❌ Null'}</span>
-                                </div>
-                            </div>*/}
-                        </div>
-                    )}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -692,7 +669,7 @@ const LessonView = () => {
                     {toast.msg}
                 </div>
             )}
-        </div>
+        </>
     );
 };
 
