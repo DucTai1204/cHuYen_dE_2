@@ -25,7 +25,7 @@ export const ChatProvider = ({ children }) => {
         // Tránh trường hợp user = decoded JWT (chưa có id_nguoi_dung) → URL = ws/chat/undefined/
         if (!user || !user.id_nguoi_dung || socketRef.current) return;
 
-        const backendUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+        const backendUrl = import.meta.env.VITE_API_BASE_URL || '';
         const wsUrl = backendUrl.replace('http', 'ws') + `/ws/chat/${user.id_nguoi_dung}/`;
         
         console.log('[ChatContext] Connecting Socket...');
