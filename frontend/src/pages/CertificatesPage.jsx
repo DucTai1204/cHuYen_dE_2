@@ -32,8 +32,8 @@ const CertificatesPage = () => {
     return (
         <div className="fade-up" style={{ padding: '1.5rem 0' }}>
             <div style={{ marginBottom: '2rem' }}>
-                <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#1e293b', marginBottom: '.5rem' }}>Kho Chứng Chỉ Số</h1>
-                <p style={{ color: '#64748b', fontSize: '.9rem' }}>Nơi lưu trữ các chứng chỉ đã được xác thực bằng công nghệ Blockchain của bạn.</p>
+                <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#1e293b', marginBottom: '.5rem' }}>Chứng Chỉ Của Tôi</h1>
+                <p style={{ color: '#64748b', fontSize: '.9rem' }}>Nơi lưu trữ các chứng chỉ hoàn thành khóa học của bạn.</p>
             </div>
 
             {certificates.length === 0 ? (
@@ -55,7 +55,7 @@ const CertificatesPage = () => {
                     </div>
                     <h3 style={{ fontWeight: 700, color: '#475569', marginBottom: '.75rem' }}>Chưa có chứng chỉ nào</h3>
                     <p style={{ color: '#64748b', fontSize: '.9rem', maxWidth: 400, marginBottom: '2rem' }}>
-                        Hãy hoàn thành khóa học để nhận được những chứng chỉ danh giá được xác thực trên Blockchain.
+                        Hãy hoàn thành khóa học để nhận được những chứng chỉ danh giá từ EduHKT.
                     </p>
                     <Link to="/dashboard">
                         <button style={{ 
@@ -96,7 +96,7 @@ const CertificatesPage = () => {
 
                                 <div style={{ padding: '1.25rem' }}>
                                     <div style={{ fontSize: '.7rem', color: '#3b82f6', fontWeight: 800, letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: '.5rem' }}>
-                                        Blockchain EdunChain
+                                        Hệ thống EduHKT
                                     </div>
                                     <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#1e293b', marginBottom: '1rem', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: '2.8rem' }}>
                                         {course?.ten_khoa_hoc}
@@ -105,7 +105,12 @@ const CertificatesPage = () => {
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '.6rem', marginBottom: '1.5rem' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.8rem' }}>
                                             <span style={{ color: '#64748b' }}>Ngày cấp:</span>
-                                            <span style={{ color: '#1e293b', fontWeight: 600 }}>{new Date(item.ngay_dang_ky).toLocaleDateString('vi-VN')}</span>
+                                            <span style={{ color: '#1e293b', fontWeight: 600 }}>
+                                                {(() => {
+                                                    const d = new Date(item.ngay_dang_ky);
+                                                    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                                                })()}
+                                            </span>
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.8rem' }}>
                                             <span style={{ color: '#64748b' }}>Trình độ:</span>

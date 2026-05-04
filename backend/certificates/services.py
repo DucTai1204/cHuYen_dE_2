@@ -22,7 +22,7 @@ def cap_chung_chi_tu_dong(dang_ky):
     # Sinh UUID duy nhất
     ma_uuid = str(uuid.uuid4())
     
-    # Simulate Blockchain hashing signature block
+    # Sinh mã băm bảo mật (Hash) cho chứng chỉ
     data_to_hash = f"{ma_uuid}-{dang_ky.id_nguoi_dung.username}-{dang_ky.id_khoa_hoc.ten_khoa_hoc}-{timezone.now().isoformat()}".encode('utf-8')
     chuoi_hash = hashlib.sha256(data_to_hash).hexdigest()
 

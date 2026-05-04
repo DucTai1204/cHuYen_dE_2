@@ -10,6 +10,8 @@ const VerifyCertificate = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
+    const [showTechInfo, setShowTechInfo] = useState(false);
+
     useEffect(() => {
         api.get(`/certificates/verify/${uuid}/`)
             .then(res => { if (res.data.hop_le) setCertData(res.data.chung_chi); else setError(res.data.error || 'Chứng chỉ không hợp lệ.'); })
@@ -20,135 +22,220 @@ const VerifyCertificate = () => {
     if (loading) return (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', flexDirection: 'column', gap: '1rem' }}>
             <div style={{ width: 48, height: 48, border: '3px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-            <p style={{ color: 'var(--text-secondary)' }}>Đang xác thực Blockchain Hash...</p>
+            <p style={{ color: 'var(--text-secondary)' }}>Đang xác thực thông tin...</p>
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
     );
 
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh', padding: '2rem 0' }}>
-            <div className="glass-panel fade-up" style={{ maxWidth: 600, width: '100%' }}>
-                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                    <div style={{ marginBottom: '.5rem', display: 'flex', justifyContent: 'center' }}>
-                        <MI name={error ? 'cancel' : 'verified'} style={{ fontSize: '3rem', color: error ? '#ef4444' : '#10b981' }} />
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', padding: '2rem', background: '#f0f2f5' }}>
+            <div style={{ maxWidth: 1000, width: '100%', position: 'relative' }}>
+                
+                {/* Header Actions */}
+                <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '.5rem', color: '#64748b', textDecoration: 'none', fontSize: '.9rem', fontWeight: 600 }}>
+                        <MI name="arrow_back" /> Về trang chủ
+                    </Link>
+                    <div style={{ display: 'flex', gap: '.75rem' }}>
+                        <button 
+                            onClick={() => setShowTechInfo(!showTechInfo)}
+                            style={{ background: showTechInfo ? '#e2e8f0' : '#fff', border: '1px solid #cbd5e1', padding: '.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                            <MI name="info" style={{ fontSize: '1.1rem', color: '#64748b' }} /> {showTechInfo ? 'Ẩn chi tiết' : 'Thông số xác thực'}
+                        </button>
+                        <button 
+                            onClick={() => {
+                                const originalTitle = document.title;
+                                document.title = `Chứng chỉ ${certData.ten_khoa_hoc} - ${certData.ho_va_ten_hoc_vien}`;
+                                window.print();
+                                document.title = originalTitle;
+                            }}
+                            style={{ background: '#1e293b', color: '#fff', border: 'none', padding: '.5rem 1.25rem', borderRadius: '8px', cursor: 'pointer', fontSize: '.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                            <MI name="download" style={{ fontSize: '1.1rem' }} /> Tải PDF
+                        </button>
                     </div>
-                    <h2 style={{ fontSize: '1.4rem', fontWeight: 700 }}>Xác Thực Chứng Chỉ Số</h2>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '.9rem', marginTop: '.3rem' }}>Hệ thống EduHKT Blockchain Verification</p>
                 </div>
 
                 {error ? (
-                    <div style={{ textAlign: 'center', padding: '2rem', background: 'rgba(239, 68, 68, 0.05)', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                        <MI name="report_problem" style={{ fontSize: '3rem', color: '#ef4444', marginBottom: '1rem' }} />
-                        <h3 style={{ color: '#ef4444', fontWeight: 700 }}>Không hợp lệ!</h3>
-                        <p style={{ color: 'var(--text-secondary)' }}>{error}</p>
+                    <div className="glass-panel" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
+                        <MI name="report_problem" style={{ fontSize: '4rem', color: '#ef4444', marginBottom: '1rem' }} />
+                        <h2 style={{ color: '#ef4444', fontWeight: 800 }}>Không tìm thấy chứng chỉ</h2>
+                        <p style={{ color: '#64748b' }}>{error}</p>
                     </div>
                 ) : (
-                    <>
-                        {/* Visual Certificate Card */}
-                        <div style={{
-                            background: 'white',
-                            padding: '2.5rem',
-                            borderRadius: '16px',
-                            boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-                            border: '1px solid #e2e8f0',
-                            marginBottom: '2rem',
+                    <div style={{ position: 'relative' }}>
+                        
+                        {/* THE CERTIFICATE - A4 LANDSCAPE RATIO (1.414:1) */}
+                        <div id="certificate-print-area" style={{
+                            width: '100%',
+                            aspectRatio: '1.414 / 1',
+                            background: '#fff',
                             position: 'relative',
+                            padding: '40px',
+                            boxShadow: '0 30px 60px rgba(0,0,0,0.12)',
+                            borderRadius: '4px',
                             overflow: 'hidden',
+                            border: '1px solid #d1d5db',
+                            display: 'flex',
+                            flexDirection: 'column',
                             color: '#1e293b'
                         }}>
-                            {/* Decorative elements */}
-                            <div style={{ position: 'absolute', top: -40, right: -40, width: 120, height: 120, background: 'rgba(59, 130, 246, 0.05)', borderRadius: '50%' }} />
-                            <div style={{ position: 'absolute', bottom: -20, left: -20, width: 80, height: 80, background: 'rgba(16, 185, 129, 0.05)', borderRadius: '50%' }} />
+                            {/* Ornamental Frame */}
+                            <div style={{ position: 'absolute', inset: '15px', border: '2px solid #e2e8f0', pointerEvents: 'none' }} />
+                            <div style={{ position: 'absolute', inset: '25px', border: '1px solid #f1f5f9', pointerEvents: 'none' }} />
+                            
+                            {/* Decorative Corners */}
+                            <div style={{ position: 'absolute', top: 20, left: 20, width: 60, height: 60, borderTop: '4px solid #3b82f6', borderLeft: '4px solid #3b82f6' }} />
+                            <div style={{ position: 'absolute', top: 20, right: 20, width: 60, height: 60, borderTop: '4px solid #3b82f6', borderRight: '4px solid #3b82f6' }} />
+                            <div style={{ position: 'absolute', bottom: 20, left: 20, width: 60, height: 60, borderBottom: '4px solid #3b82f6', borderLeft: '4px solid #3b82f6' }} />
+                            <div style={{ position: 'absolute', bottom: 20, right: 20, width: 60, height: 60, borderBottom: '4px solid #3b82f6', borderRight: '4px solid #3b82f6' }} />
 
-                            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                                <div style={{ fontSize: '.75rem', fontWeight: 800, color: '#3b82f6', letterSpacing: '.2em', textTransform: 'uppercase', marginBottom: '.5rem' }}>
-                                    Chứng Chỉ Hoàn Thành
-                                </div>
-                                <h1 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0, fontFamily: "'EB Garamond', serif" }}>
-                                    CERTIFICATE
-                                </h1>
-                                <div style={{ width: 60, height: 2, background: '#3b82f6', margin: '.75rem auto' }} />
-                                <div style={{ fontSize: '.85rem', color: '#64748b' }}>Hệ thống đào tạo trực tuyến EduHKT</div>
+                            {/* Background Watermark */}
+                            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', opacity: 0.03, zIndex: 0, pointerEvents: 'none' }}>
+                                <MI name="school" style={{ fontSize: '30rem' }} />
                             </div>
 
-                            <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-                                <div style={{ fontSize: '.9rem', color: '#64748b', marginBottom: '.5rem' }}>Chứng nhận rằng</div>
-                                <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#1e293b', marginBottom: '.5rem' }}>
-                                    {certData.ho_va_ten_hoc_vien}
-                                </div>
-                                <div style={{ fontSize: '.9rem', color: '#64748b' }}>đã hoàn thành xuất sắc khóa học</div>
-                                <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#2563eb', marginTop: '.75rem' }}>
-                                    {certData.ten_khoa_hoc}
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                                <div style={{ textAlign: 'left' }}>
-                                    <div style={{ fontSize: '.75rem', color: '#94a3b8' }}>Ngày cấp</div>
-                                    <div style={{ fontSize: '.85rem', fontWeight: 600 }}>{new Date(certData.ngay_cap).toLocaleDateString('vi-VN')}</div>
-                                </div>
-                                <div style={{ textAlign: 'center' }}>
-                                    <div style={{ width: 64, height: 64, background: '#f8fafc', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #e2e8f0', color: '#3b82f6', fontSize: '2rem' }}>
-                                        <MI name="verified" style={{ fontSize: '2rem' }} />
+                            {/* Header Section */}
+                            <div style={{ textAlign: 'center', zIndex: 1, marginTop: '20px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+                                    <div style={{ background: '#3b82f6', width: 50, height: 50, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                                        <MI name="verified" style={{ fontSize: '1.8rem' }} />
                                     </div>
-                                    <div style={{ fontSize: '.6rem', fontWeight: 800, color: '#94a3b8', marginTop: '.4rem', textTransform: 'uppercase' }}>Xác minh blockchain</div>
                                 </div>
-                                <div style={{ textAlign: 'right' }}>
-                                    <div style={{ fontSize: '.75rem', color: '#94a3b8' }}>Tổ chức cấp</div>
-                                    <div style={{ fontSize: '.85rem', fontWeight: 600 }}>{certData.ten_to_chuc_cap || 'EduHKT Academy'}</div>
+                                <h4 style={{ margin: 0, letterSpacing: '0.3em', color: '#3b82f6', fontWeight: 800, fontSize: '0.8rem', textTransform: 'uppercase' }}>Chứng Chỉ Hoàn Thành</h4>
+                                <h1 style={{ margin: '10px 0', fontSize: '3.5rem', fontWeight: 900, fontFamily: "'Times New Roman', serif", color: '#1e293b' }}>CERTIFICATE</h1>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px' }}>
+                                    <div style={{ height: '1px', background: '#e2e8f0', width: '80px' }} />
+                                    <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>Cấp bởi Hệ thống Đào tạo EduHKT</span>
+                                    <div style={{ height: '1px', background: '#e2e8f0', width: '80px' }} />
+                                </div>
+                            </div>
+
+                            {/* Body Section */}
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center', zIndex: 1, padding: '0 60px' }}>
+                                <p style={{ fontSize: '1.1rem', color: '#64748b', marginBottom: '5px', fontStyle: 'italic' }}>Chứng nhận rằng</p>
+                                <h2 style={{ fontSize: '2.8rem', fontWeight: 800, color: '#1e3a8a', margin: '5px 0', fontFamily: "'EB Garamond', serif" }}>{certData.ho_va_ten_hoc_vien}</h2>
+                                <div style={{ width: '100%', height: '1px', background: 'linear-gradient(to right, transparent, #3b82f6, transparent)', margin: '15px auto' }} />
+                                <p style={{ fontSize: '1rem', color: '#64748b', marginBottom: '10px' }}>Đã hoàn thành xuất sắc khóa học chuyên môn</p>
+                                <h3 style={{ fontSize: '1.8rem', fontWeight: 700, color: '#2563eb', margin: '5px 0' }}>{certData.ten_khoa_hoc}</h3>
+                            </div>
+
+                            {/* Footer Section */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', zIndex: 1, padding: '0 20px 20px 20px' }}>
+                                <div style={{ textAlign: 'center', width: '180px' }}>
+                                    <div style={{ fontSize: '0.85rem', color: '#1e293b', fontWeight: 700, marginBottom: '10px' }}>
+                                        {(() => {
+                                            const d = new Date(certData.ngay_cap);
+                                            return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                                        })()}
+                                    </div>
+                                    <div style={{ height: '1px', background: '#1e293b', width: '100%', marginBottom: '5px' }} />
+                                    <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Ngày cấp chứng nhận</div>
+                                </div>
+
+                                <div style={{ textAlign: 'center', position: 'relative' }}>
+                                    {/* Mock Seal */}
+                                    <div style={{ width: 100, height: 100, border: '4px double #3b82f6', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3b82f6', position: 'absolute', top: -110, left: '50%', transform: 'translateX(-50%) rotate(-15deg)', opacity: 0.8 }}>
+                                        <div style={{ textAlign: 'center', fontWeight: 900, fontSize: '0.6rem' }}>
+                                            EDUKHT<br/>VERIFIED<br/>{new Date().getFullYear()}
+                                        </div>
+                                    </div>
+                                    <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700 }}>ID: {certData.ma_uuid_chung_chi.slice(0, 18).toUpperCase()}</div>
+                                </div>
+
+                                <div style={{ textAlign: 'center', width: '180px' }}>
+                                    <div style={{ fontSize: '0.9rem', color: '#1e293b', fontWeight: 800, marginBottom: '10px', minHeight: '20px' }}>{certData.ten_to_chuc_cap || 'Tập đoàn EduHKT'}</div>
+                                    <div style={{ height: '1px', background: '#1e293b', width: '100%', marginBottom: '5px' }} />
+                                    <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Đơn vị xác thực đào tạo</div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="alert alert-success" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center' }}>
-                            <MI name="verified" style={{ fontSize: '1.25rem', color: '#059669', marginRight: '.75rem' }} />
-                            <span><strong>Chứng chỉ hợp lệ</strong> — Đã được xác minh và lưu trữ trên hệ thống Blockchain.</span>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '.1rem', marginBottom: '2rem' }}>
-                            <p style={{ fontSize: '.8rem', color: '#64748b', fontWeight: 700, marginLeft: '.5rem', marginBottom: '.5rem', textTransform: 'uppercase' }}>Thông tin kỹ thuật</p>
-                            {[
-                                { label: 'Mã định danh (UUID)', value: certData.ma_uuid_chung_chi, small: true },
-                                { label: 'Blockchain Hash', value: certData.chuoi_hash_blockchain || 'Đang đồng bộ...', small: true },
-                                { label: 'Tổ chức cấp chuyển môn', value: certData.ten_to_chuc_cap || 'EduHKT / ' + (certData.id_dang_ky?.id_khoa_hoc?.id_giang_vien?.ho_va_ten || 'Giảng viên hệ thống') },
-                                { label: 'Trạng thái hiệu lực', value: certData.trang_thai === 'HieuLuc' ? 'Đang có hiệu lực' : 'Đã thu hồi' },
-                            ].map(({ label, value, small }) => (
-                                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '.75rem 1rem', borderBottom: '1px solid #f1f5f9' }}>
-                                    <span style={{ color: '#64748b', fontSize: '.8rem' }}>{label}</span>
-                                    <span style={{ fontFamily: small ? 'monospace' : 'inherit', fontSize: small ? '.7rem' : '.85rem', wordBreak: 'break-all', textAlign: 'right', fontWeight: 500, color: '#1e293b' }}>{value}</span>
+                        {/* Technical Information - Toggleable Panel */}
+                        {showTechInfo && (
+                            <div className="fade-up no-print" style={{ marginTop: '1.5rem', background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)' }}>
+                                <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #f1f5f9', background: '#f8fafc', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                                    <MI name="settings_ethernet" style={{ color: '#3b82f6' }} />
+                                    <span style={{ fontWeight: 700, fontSize: '.85rem', color: '#475569', textTransform: 'uppercase' }}>Thông số kỹ thuật xác thực</span>
                                 </div>
-                            ))}
-                        </div>
+                                <div style={{ padding: '1rem 1.25rem' }}>
+                                    {[
+                                        { label: 'Mã định danh (UUID)', value: certData.ma_uuid_chung_chi, mono: true },
+                                        { label: 'Mã băm bảo mật (Hash)', value: certData.chuoi_hash_blockchain, mono: true },
+                                        { label: 'Trạng thái hệ thống', value: certData.trang_thai === 'HieuLuc' ? 'Đang có hiệu lực' : 'Đã thu hồi', color: '#10b981' },
+                                        { label: 'Tổ chức cấp chuyển môn', value: certData.ten_to_chuc_cap || 'Hệ thống EduHKT' },
+                                    ].map(({ label, value, mono, color }) => (
+                                        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '.6rem 0', borderBottom: '1px solid #f8fafc' }}>
+                                            <span style={{ fontSize: '.8rem', color: '#64748b' }}>{label}</span>
+                                            <span style={{ fontSize: '.8rem', fontWeight: 600, color: color || '#1e293b', fontFamily: mono ? 'monospace' : 'inherit', wordBreak: 'break-all', textAlign: 'right', marginLeft: '2rem' }}>{value}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
-                        <button
-                            className="btn-primary"
-                            style={{
-                                width: '100%',
-                                justifyContent: 'center',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '.6rem',
-                                padding: '1rem',
-                                borderRadius: '12px',
-                                background: 'linear-gradient(135deg, #1e293b, #0f172a)',
-                                border: 'none',
-                                color: 'white',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                            }}
-                            onClick={() => window.print()}
-                        >
-                            <MI name="print" style={{ fontSize: '1.2rem' }} /> In chứng chỉ / Tải về PDF
-                        </button>
-                    </>
+                        {/* Status Banner */}
+                        {!showTechInfo && (
+                            <div className="fade-up no-print" style={{ marginTop: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.5rem', padding: '1rem', background: '#ecfdf5', borderRadius: '12px', border: '1px solid #bbf7d0', color: '#065f46', fontSize: '.9rem', fontWeight: 600 }}>
+                                <MI name="verified" style={{ color: '#059669' }} />
+                                <span>Chứng chỉ này là hợp lệ và được xác thực bởi hệ thống EduHKT</span>
+                            </div>
+                        )}
+                    </div>
                 )}
-
-
-                <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-                    <Link to="/" style={{ color: 'var(--text-secondary)', fontSize: '.85rem', textDecoration: 'none' }}>← Về trang chủ</Link>
-                </div>
             </div>
+
+            <style>{`
+                @media print {
+                    @page { 
+                        size: landscape;
+                        margin: 0;
+                    }
+                    
+                    /* Bước 1: Triệt tiêu toàn bộ nội dung trang */
+                    html, body {
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        overflow: hidden !important;
+                        height: 100% !important;
+                        width: 100% !important;
+                        background: white !important;
+                    }
+                    body > *:not(#root),
+                    nav, header, footer, .no-print {
+                        display: none !important;
+                    }
+                    
+                    /* Bước 2: Xóa sạch không gian của mọi phần tử cha */
+                    #root, #root > *, #root > * > *, #root > * > * > * {
+                        display: contents !important;
+                    }
+                    
+                    /* Bước 3: Chỉ hiển thị duy nhất tấm bằng */
+                    #certificate-print-area {
+                        display: flex !important;
+                        flex-direction: column;
+                        position: fixed !important;
+                        top: 0 !important;
+                        left: 0 !important;
+                        width: 100vw !important;
+                        height: 100vh !important;
+                        margin: 0 !important;
+                        padding: 15mm !important;
+                        z-index: 99999;
+                        border: none !important;
+                        border-radius: 0 !important;
+                        box-shadow: none !important;
+                        background: white !important;
+                        box-sizing: border-box !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                        aspect-ratio: unset !important;
+                    }
+                }
+                @keyframes spin { to { transform: rotate(360deg); } }
+            `}</style>
         </div>
     );
 };
