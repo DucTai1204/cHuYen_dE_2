@@ -292,25 +292,51 @@ const QuizEditor = ({ lesson, onUpdate }) => {
                         {/* Choices list */}
                         <div style={{ paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
                             {(q.lua_chon || []).map((c, cidx) => (
-                                <div key={c.id_lua_chon} style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                                    <input 
-                                        type="radio" 
-                                        name={`q-${q.id_cau_hoi}`} 
-                                        checked={c.la_dap_an_dung} 
-                                        onChange={() => setCorrectChoice(q.id_cau_hoi, c.id_lua_chon)}
-                                        style={{ accentColor: '#10b981', cursor: 'pointer' }}
-                                    />
+                                <div 
+                                    key={c.id_lua_chon} 
+                                    style={{ 
+                                        display: 'flex', alignItems: 'center', gap: '.5rem', 
+                                        padding: '.4rem .6rem', borderRadius: '8px',
+                                        background: c.la_dap_an_dung ? '#f0fdf4' : 'var(--bg-app)',
+                                        border: `1px solid ${c.la_dap_an_dung ? '#10b981' : 'var(--border)'}`,
+                                        transition: 'all .2s'
+                                    }}
+                                >
+                                    <div 
+                                        onClick={() => setCorrectChoice(q.id_cau_hoi, c.id_lua_chon)}
+                                        title={c.la_dap_an_dung ? "Đang là đáp án đúng" : "Chọn làm đáp án đúng"}
+                                        style={{ 
+                                            cursor: 'pointer', 
+                                            color: c.la_dap_an_dung ? '#10b981' : '#94a3b8',
+                                            display: 'flex', alignItems: 'center', gap: '.3rem',
+                                            flexShrink: 0,
+                                            userSelect: 'none'
+                                        }}
+                                    >
+                                        <MI name={c.la_dap_an_dung ? 'check_circle' : 'radio_button_unchecked'} style={{ fontSize: '1.1rem' }} />
+                                        {c.la_dap_an_dung && <span style={{ fontSize: '.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em' }}>Đáp án đúng</span>}
+                                    </div>
                                     <input 
                                         className="form-input"
                                         value={c.noi_dung}
                                         onChange={e => updateChoiceContent(q.id_cau_hoi, c.id_lua_chon, e.target.value)}
-                                        style={{ fontSize: '.78rem', padding: '.3rem .5rem', flex: 1 }}
+                                        style={{ 
+                                            fontSize: '.78rem', padding: '.2rem .4rem', flex: 1, 
+                                            border: 'none', background: 'transparent', outline: 'none'
+                                        }}
                                         placeholder="Nội dung lựa chọn..."
                                     />
-                                    <button onClick={() => deleteChoice(q.id_cau_hoi, c.id_lua_chon)} style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer' }}>✕</button>
+                                    <button 
+                                        onClick={() => deleteChoice(q.id_cau_hoi, c.id_lua_chon)} 
+                                        style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '.75rem', display: 'flex', alignItems: 'center' }}
+                                    >
+                                        <MI name="close" style={{ fontSize: '.9rem' }} />
+                                    </button>
                                 </div>
                             ))}
-                            <button onClick={() => addChoice(q.id_cau_hoi)} style={{ alignSelf: 'flex-start', background: 'none', border: 'none', color: SELLER_ORANGE, fontSize: '.75rem', fontWeight: 600, cursor: 'pointer', marginTop: '.2rem' }}>+ Thêm phương án</button>
+                            <button onClick={() => addChoice(q.id_cau_hoi)} style={{ alignSelf: 'flex-start', background: 'none', border: 'none', color: SELLER_ORANGE, fontSize: '.75rem', fontWeight: 700, cursor: 'pointer', marginTop: '.2rem', display: 'flex', alignItems: 'center', gap: '.2rem' }}>
+                                <MI name="add_circle_outline" style={{ fontSize: '.9rem' }} /> Thêm phương án
+                            </button>
                         </div>
                     </div>
                 ))}
@@ -422,6 +448,18 @@ const LessonEditor = ({ lesson, onSave, onClose }) => {
 
                 {/* Xem trước & Điều kiện hoàn thành */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '.75rem' }}>
+                    {form.loai_bai === 'Quiz' && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', padding: '.75rem', background: '#fef2f2', borderRadius: '8px', border: '1px solid #fecaca' }}>
+                            <input type="checkbox" id="proctored-check" checked={!!form.is_proctored} onChange={e => set('is_proctored', e.target.checked)} style={{ width: 16, height: 16, accentColor: '#ef4444', cursor: 'pointer' }} />
+                            <div>
+                                <label htmlFor="proctored-check" style={{ fontSize: '.875rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '.3rem', color: '#991b1b' }}>
+                                    <MI name="security" style={{ fontSize: '1rem' }} /> Kích hoạt giám sát thi (Anti-Cheating)
+                                </label>
+                                <span style={{ fontSize: '.75rem', color: '#b91c1c', opacity: 0.8 }}>Bật tính năng chống chuyển tab, chặn phím tắt và mời học viên ra ngoài nếu vi phạm</span>
+                            </div>
+                        </div>
+                    )}
+
                     <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', padding: '.75rem', background: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border)' }}>
                         <input type="checkbox" id="preview-check" checked={!!form.la_xem_truoc} onChange={e => set('la_xem_truoc', e.target.checked)} style={{ width: 16, height: 16, accentColor: SELLER_ORANGE, cursor: 'pointer' }} />
                         <div>

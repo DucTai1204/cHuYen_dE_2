@@ -48,7 +48,7 @@ class BaiGiangSerializer(serializers.ModelSerializer):
             'id_bai_giang', 'id_khoa_hoc', 'id_chuong',
             'ten_bai_giang', 'noi_dung_url', 'loai_bai',
             'thoi_luong_phut', 'thu_tu', 'la_xem_truoc',
-            'video_watch_percentage', 'is_locked', 'cau_hoi'
+            'video_watch_percentage', 'is_proctored', 'is_locked', 'cau_hoi'
         ]
 
     def get_is_locked(self, obj):

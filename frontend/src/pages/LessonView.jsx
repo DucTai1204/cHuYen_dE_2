@@ -232,13 +232,156 @@ const TextViewer = ({ lesson, onComplete }) => {
     );
 };
 
+/* ── REUSABLE MODAL ── */
+const ModernModal = ({ isOpen, title, children, onClose, icon = "info", type = "info" }) => {
+    if (!isOpen) return null;
+    const colors = {
+        error: { bg: '#fee2e2', text: '#991b1b', icon: '#ef4444' },
+        warning: { bg: '#fef3c7', text: '#92400e', icon: '#f59e0b' },
+        info: { bg: '#eff6ff', text: '#1e40af', icon: '#3b82f6' }
+    };
+    const c = colors[type] || colors.info;
+
+    return (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '1.5rem' }}>
+            <div style={{ background: '#fff', borderRadius: '24px', width: '100%', maxWidth: '420px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', animation: 'modalAppear 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
+                <div style={{ padding: '2rem', textAlign: 'center' }}>
+                    <div style={{ width: '64px', height: '64px', background: c.bg, color: c.icon, borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+                        <span className="material-icons" style={{ fontSize: '2.5rem' }}>{icon}</span>
+                    </div>
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#1e293b', marginBottom: '1rem' }}>{title}</h3>
+                    <div style={{ fontSize: '.95rem', color: '#64748b', lineHeight: 1.6, marginBottom: '2rem' }}>
+                        {children}
+                    </div>
+                    <button 
+                        onClick={onClose}
+                        style={{ width: '100%', padding: '1rem', background: '#1e293b', color: '#fff', border: 'none', borderRadius: '16px', fontWeight: 700, fontSize: '.95rem', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 10px 15px -3px rgba(30, 41, 59, 0.3)' }}
+                        onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                        onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                    >
+                        Tôi đã hiểu
+                    </button>
+                </div>
+            </div>
+            <style>{`
+                @keyframes modalAppear {
+                    from { opacity: 0; transform: scale(0.9) translateY(20px); }
+                    to { opacity: 1; transform: scale(1) translateY(0); }
+                }
+            `}</style>
+        </div>
+    );
+};
+
 /* ════════════════════════════════════════════════════
    QUIZ VIEWER — hoàn thành khi nộp bài
 ════════════════════════════════════════════════════ */
 const QuizViewer = ({ lesson, onComplete }) => {
+    const navigate = useNavigate();
     const [answers, setAnswers] = useState({});
     const [result, setResult] = useState(null);
     const [submitting, setSubmitting] = useState(false);
+    const [warnings, setWarnings] = useState(0);
+    const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement);
+    
+    // Timer & Modal States
+    const [timeLeft, setTimeLeft] = useState((lesson.thoi_luong_phut || 60) * 60);
+    const [isPaused, setIsPaused] = useState(!!lesson.is_proctored);
+    const [showIntro, setShowIntro] = useState(!!lesson.is_proctored);
+    const [modalInfo, setModalInfo] = useState(null);
+
+    // Timer logic
+    useEffect(() => {
+        if (result || isPaused || timeLeft <= 0) return;
+        const timer = setInterval(() => {
+            setTimeLeft(prev => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    handleSubmit(); // Tự động nộp bài khi hết giờ
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [isPaused, result, timeLeft]);
+
+    const formatTime = (seconds) => {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        return `${h > 0 ? h + ':' : ''}${m < 10 ? '0' + m : m}:${s < 10 ? '0' + s : s}`;
+    };
+
+    // Proctoring Logic
+    useEffect(() => {
+        if (result || showIntro || !lesson.is_proctored) return;
+
+        const triggerWarning = (msg) => {
+            setIsPaused(true);
+            setWarnings(prev => {
+                const next = prev + 1;
+                if (next >= 5) {
+                    // Trục xuất học viên
+                    navigate(`/courses/${lesson.id_khoa_hoc}`, { 
+                        state: { kicked: true, courseId: lesson.id_khoa_hoc } 
+                    });
+                } else {
+                    setModalInfo({
+                        title: "Cảnh báo vi phạm",
+                        message: msg,
+                        icon: "warning",
+                        type: "warning"
+                    });
+                }
+                return next;
+            });
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                triggerWarning("Hệ thống phát hiện bạn rời khỏi màn hình bài thi. Vui lòng tập trung làm bài!");
+            }
+        };
+
+        const preventActions = (e) => {
+            e.preventDefault();
+            triggerWarning("Hành động bị chặn (chuột phải/copy/paste) để đảm bảo tính công bằng!");
+            return false;
+        };
+
+        const handleKeyDown = (e) => {
+            if (
+                e.keyCode === 123 || 
+                (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) || 
+                (e.ctrlKey && e.keyCode === 85) ||
+                (e.ctrlKey && (e.keyCode === 67 || e.keyCode === 86 || e.keyCode === 88))
+            ) {
+                e.preventDefault();
+                triggerWarning("Bạn không được sử dụng phím tắt (F12, Ctrl+C, Ctrl+V...) trong lúc thi!");
+                return false;
+            }
+        };
+
+        const handleFs = () => setIsFullscreen(!!document.fullscreenElement);
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        document.addEventListener('contextmenu', preventActions);
+        document.addEventListener('copy', preventActions);
+        document.addEventListener('paste', preventActions);
+        document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('fullscreenchange', handleFs);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            document.removeEventListener('contextmenu', preventActions);
+            document.removeEventListener('copy', preventActions);
+            document.removeEventListener('paste', preventActions);
+            document.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener('fullscreenchange', handleFs);
+        };
+    }, [result, showIntro, lesson.id_khoa_hoc]);
+
 
     const questions = lesson.cau_hoi || [];
     const allAnswered = questions.length > 0 && questions.every(q => answers[q.id_cau_hoi] !== undefined);
@@ -294,14 +437,65 @@ const QuizViewer = ({ lesson, onComplete }) => {
 
     return (
         <div>
-            <div style={{ background: 'linear-gradient(135deg, #1e40af, #3b82f6)', color: '#fff', borderRadius: '12px', padding: '1.25rem 1.5rem', marginBottom: '1.25rem' }}>
-                <div style={{ fontWeight: 700, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span className="material-icons">assignment</span> {lesson.ten_bai_giang}
+            <div style={{ background: 'linear-gradient(135deg, #1e40af, #3b82f6)', color: '#fff', borderRadius: '12px', padding: '1.25rem 1.5rem', marginBottom: '1.25rem', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: '-10px', right: '-10px', opacity: 0.1, fontSize: '5rem' }}>🛡️</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                        <div style={{ fontWeight: 700, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span className="material-icons">assignment</span> {lesson.ten_bai_giang}
+                        </div>
+                        <div style={{ fontSize: '.85rem', opacity: .85, marginTop: '.4rem', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <span className="material-icons" style={{ fontSize: '1rem' }}>help_outline</span> {questions.length} câu hỏi
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: timeLeft < 300 ? '#fca5a5' : '#fff' }}>
+                                <span className="material-icons" style={{ fontSize: '1rem' }}>timer</span> {formatTime(timeLeft)}
+                            </span>
+                        </div>
+                    </div>
+                    {lesson.is_proctored && (
+                        <div style={{ textAlign: 'right', background: 'rgba(255,255,255,0.2)', padding: '.5rem .8rem', borderRadius: '10px', backdropFilter: 'blur(4px)' }}>
+                            <div style={{ fontSize: '.65rem', fontWeight: 800, textTransform: 'uppercase' }}>Giám sát AI</div>
+                            <div style={{ fontSize: '.9rem', fontWeight: 700 }}>Vi phạm: <span style={{ color: warnings > 0 ? '#ef4444' : '#fff' }}>{warnings}/5</span></div>
+                        </div>
+                    )}
                 </div>
-                <div style={{ fontSize: '.85rem', opacity: .85, marginTop: '.4rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <span className="material-icons" style={{ fontSize: '1rem' }}>help_outline</span> {questions.length} câu hỏi · Đạt 80% để hoàn thành
-                </div>
+                {lesson.is_proctored && !isFullscreen && !showIntro && (
+                    <button 
+                        onClick={() => document.documentElement.requestFullscreen()}
+                        style={{ marginTop: '1rem', width: '100%', padding: '.5rem', borderRadius: '8px', border: '1px dashed #fff', background: 'rgba(255,255,255,0.1)', color: '#fff', fontSize: '.75rem', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                        ⚠️ Nhấn để bật Toàn màn hình (Khuyến nghị)
+                    </button>
+                )}
             </div>
+
+            {/* Modals */}
+            <ModernModal 
+                isOpen={showIntro} 
+                title="Quy chế bài thi" 
+                icon="gavel"
+                onClose={() => { setShowIntro(false); setIsPaused(false); }}
+            >
+                <p>Chào mừng bạn đến với bài thi. Để đảm bảo tính công bằng, vui lòng tuân thủ:</p>
+                <ul style={{ textAlign: 'left', marginTop: '10px', paddingLeft: '20px' }}>
+                    <li>Không chuyển Tab hoặc thu nhỏ trình duyệt.</li>
+                    <li>Không sử dụng chuột phải, Copy/Paste.</li>
+                    <li>Không sử dụng phím tắt (F12, Ctrl+C...).</li>
+                    <li><strong>Vi phạm quá 5 lần sẽ bị mời ra khỏi phòng thi.</strong></li>
+                </ul>
+            </ModernModal>
+
+            <ModernModal 
+                isOpen={!!modalInfo} 
+                title={modalInfo?.title} 
+                icon={modalInfo?.icon} 
+                type={modalInfo?.type}
+                onClose={() => { setModalInfo(null); setIsPaused(false); }}
+            >
+                {modalInfo?.message}
+            </ModernModal>
+
             {questions.map((q, qi) => (
                 <div key={q.id_cau_hoi} className="card" style={{ marginBottom: '1.25rem', boxShadow: 'var(--shadow-sm)' }}>
                     <p style={{ fontWeight: 700, marginBottom: '1rem', fontSize: '1rem' }}>Câu {qi + 1}: {q.noi_dung}</p>

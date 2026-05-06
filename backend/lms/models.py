@@ -92,6 +92,7 @@ class BaiGiang(models.Model):
     thu_tu = models.IntegerField(default=1)
     la_xem_truoc = models.BooleanField(default=False)
     video_watch_percentage = models.IntegerField(default=100)
+    is_proctored = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['thu_tu']

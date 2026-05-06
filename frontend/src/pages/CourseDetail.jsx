@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
@@ -99,6 +99,47 @@ const ChapterAccordion = ({ chapter, defaultOpen = false, isEnrolled, courseId, 
     );
 };
 
+/* ── REUSABLE MODAL ── */
+const ModernModal = ({ isOpen, title, children, onClose, icon = "info", type = "info" }) => {
+    if (!isOpen) return null;
+    const colors = {
+        error: { bg: '#fee2e2', text: '#991b1b', icon: '#ef4444' },
+        warning: { bg: '#fef3c7', text: '#92400e', icon: '#f59e0b' },
+        info: { bg: '#eff6ff', text: '#1e40af', icon: '#3b82f6' }
+    };
+    const c = colors[type] || colors.info;
+
+    return (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '1.5rem' }}>
+            <div style={{ background: '#fff', borderRadius: '24px', width: '100%', maxWidth: '420px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', animation: 'modalAppear 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
+                <div style={{ padding: '2rem', textAlign: 'center' }}>
+                    <div style={{ width: '64px', height: '64px', background: c.bg, color: c.icon, borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+                        <span className="material-icons" style={{ fontSize: '2.5rem' }}>{icon}</span>
+                    </div>
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#1e293b', marginBottom: '1rem' }}>{title}</h3>
+                    <div style={{ fontSize: '.95rem', color: '#64748b', lineHeight: 1.6, marginBottom: '2rem' }}>
+                        {children}
+                    </div>
+                    <button 
+                        onClick={onClose}
+                        style={{ width: '100%', padding: '1rem', background: '#1e293b', color: '#fff', border: 'none', borderRadius: '16px', fontWeight: 700, fontSize: '.95rem', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 10px 15px -3px rgba(30, 41, 59, 0.3)' }}
+                        onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                        onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                    >
+                        Tôi đã hiểu
+                    </button>
+                </div>
+            </div>
+            <style>{`
+                @keyframes modalAppear {
+                    from { opacity: 0; transform: scale(0.9) translateY(20px); }
+                    to { opacity: 1; transform: scale(1) translateY(0); }
+                }
+            `}</style>
+        </div>
+    );
+};
+
 /* ══════════════════════════════════════════════════════════════
    MAIN: COURSE DETAIL PAGE
 ══════════════════════════════════════════════════════════════ */
@@ -106,6 +147,7 @@ const CourseDetail = () => {
     const { id } = useParams();
     const { user } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [course, setCourse] = useState(null);
     const [chapters, setChapters] = useState([]);
@@ -120,6 +162,17 @@ const CourseDetail = () => {
     const [reviewLoading, setReviewLoading] = useState(false);
     const [myReview, setMyReview] = useState({ so_sao: 5, nhan_xet: '' });
     const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+
+    // Kicked Modal State
+    const [showKickedModal, setShowKickedModal] = useState(false);
+
+    useEffect(() => {
+        if (location.state?.kicked) {
+            setShowKickedModal(true);
+            // Clear state to avoid showing it again on refresh
+            window.history.replaceState({}, document.title);
+        }
+    }, [location]);
 
     /* ── Helper: trích xuất embed URL từ nhiều định dạng YouTube ── */
     const getYouTubeEmbedUrl = (url) => {
@@ -746,6 +799,19 @@ const CourseDetail = () => {
                 </div>
             </div>
         </div>
+
+        {/* Kicked Modal */}
+        <ModernModal
+            isOpen={showKickedModal}
+            title="Đình chỉ bài thi"
+            icon="report_problem"
+            type="error"
+            onClose={() => setShowKickedModal(false)}
+        >
+            <p style={{ fontWeight: 600, color: '#ef4444', marginBottom: '10px' }}>Hệ thống đã ngừng bài thi của bạn vì phát hiện gian lận.</p>
+            <p>Bạn đã vi phạm quy chế thi quá 5 lần (chuyển tab hoặc sử dụng phím tắt bị chặn).</p>
+            <p style={{ marginTop: '15px', fontStyle: 'italic' }}>Hãy thử làm lại bài thi một cách công bằng hơn.</p>
+        </ModernModal>
 
         {/* ── TOAST ── */}
             {toast && (

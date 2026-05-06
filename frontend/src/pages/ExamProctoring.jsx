@@ -38,6 +38,8 @@ const ExamProctoring = () => {
     const [submitted, setSubmitted] = useState(false);
     const [timeLeft, setTimeLeft] = useState(EXAM_SECONDS);
     const [warnings, setWarnings] = useState(0);
+    const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement);
+
 
     // Timer
     useEffect(() => {
@@ -46,13 +48,67 @@ const ExamProctoring = () => {
         return () => clearInterval(t);
     }, [submitted]);
 
-    // Simulation: Mock AI activity (visual only)
+    // Anti-cheating logic
     useEffect(() => {
         if (submitted) return;
-        // Warnings are now manual or triggered by real events in the future
-        // const t = setInterval(() => { if (Math.random() > 0.85) setWarnings(w => w + 1); }, 8000);
-        // return () => clearInterval(t);
+
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                setWarnings(prev => prev + 1);
+                alert("Cảnh báo: Bạn vừa rời khỏi màn hình bài thi. Vi phạm đã được ghi nhận!");
+            }
+        };
+
+        const handleBlur = () => {
+            setWarnings(prev => prev + 1);
+            console.warn("User blurred the window");
+        };
+
+        const preventActions = (e) => {
+            e.preventDefault();
+            return false;
+        };
+
+        const handleKeyDown = (e) => {
+            // Block F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
+            if (
+                e.keyCode === 123 || 
+                (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) || 
+                (e.ctrlKey && e.keyCode === 85) ||
+                (e.ctrlKey && (e.keyCode === 67 || e.keyCode === 86 || e.keyCode === 88)) // Ctrl C, V, X
+            ) {
+                e.preventDefault();
+                alert("Hành động bị cấm trong lúc thi!");
+                return false;
+            }
+        };
+
+        // Add listeners
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('blur', handleBlur);
+        document.addEventListener('contextmenu', preventActions);
+        document.addEventListener('copy', preventActions);
+        document.addEventListener('paste', preventActions);
+        document.addEventListener('cut', preventActions);
+        document.addEventListener('keydown', handleKeyDown);
+
+        const handleFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement);
+        };
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('blur', handleBlur);
+            document.removeEventListener('contextmenu', preventActions);
+            document.removeEventListener('copy', preventActions);
+            document.removeEventListener('paste', preventActions);
+            document.removeEventListener('cut', preventActions);
+            document.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        };
     }, [submitted]);
+
 
     const fmt = s => `${String(Math.floor(s / 3600)).padStart(2, '0')}:${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
@@ -203,19 +259,28 @@ const ExamProctoring = () => {
                         </div>
 
                         {[
-                            { label: 'Phát hiện khuôn mặt', sub: '1 khuôn mặt · An toàn' },
-                            { label: 'Theo dõi ánh mắt', sub: 'Nhìn vào màn hình' },
-                            { label: 'Kiểm tra âm thanh', sub: 'Không phát hiện tiếng nói' },
-                            { label: 'Cửa sổ trình duyệt', sub: 'Đang ở chế độ toàn màn hình' },
+                            { label: 'Phát hiện khuôn mặt', sub: '1 khuôn mặt · An toàn', status: '✅' },
+                            { label: 'Theo dõi ánh mắt', sub: 'Nhìn vào màn hình', status: '✅' },
+                            { label: 'Kiểm tra âm thanh', sub: 'Không phát hiện tiếng nói', status: '✅' },
+                            { label: 'Cửa sổ trình duyệt', sub: isFullscreen ? 'Đang ở chế độ toàn màn hình' : 'CẢNH BÁO: Không ở toàn màn hình', status: isFullscreen ? '✅' : '⚠️' },
                         ].map((it, i) => (
                             <div key={i} className="check-item" style={{ marginBottom: '.4rem' }}>
-                                <span className="check-icon">✅</span>
+                                <span className="check-icon">{it.status}</span>
                                 <div>
-                                    <div className="check-item-title">{it.label}</div>
+                                    <div className="check-item-title" style={{ color: it.status === '⚠️' ? 'var(--danger)' : 'inherit' }}>{it.label}</div>
                                     <div className="check-item-sub">{it.sub}</div>
                                 </div>
                             </div>
                         ))}
+                        {!isFullscreen && (
+                            <button 
+                                className="btn btn-secondary btn-full" 
+                                style={{ marginTop: '.5rem', fontSize: '.75rem', padding: '.5rem', background: '#fff', border: '1px solid var(--primary)', color: 'var(--primary)' }}
+                                onClick={() => document.documentElement.requestFullscreen().catch(e => console.error(e))}
+                            >
+                                🖥️ Bật chế độ toàn màn hình
+                            </button>
+                        )}
                     </div>
 
                     <div className="card">
