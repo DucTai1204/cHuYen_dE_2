@@ -280,6 +280,7 @@ const QuizViewer = ({ lesson, onComplete }) => {
     const navigate = useNavigate();
     const [answers, setAnswers] = useState({});
     const [result, setResult] = useState(null);
+    const [viewMode, setViewMode] = useState('quiz'); // 'quiz' or 'review'
     const [submitting, setSubmitting] = useState(false);
     const [warnings, setWarnings] = useState(0);
     const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement);
@@ -403,28 +404,46 @@ const QuizViewer = ({ lesson, onComplete }) => {
         }
     };
 
-    if (result) return (
-        <div style={{ textAlign: 'center', padding: '2rem', background: result.da_dat ? '#f0fdf4' : '#fef2f2', borderRadius: '12px', border: `1px solid ${result.da_dat ? '#bbf7d0' : '#fecaca'}` }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{result.da_dat ? '🎉' : '⚠️'}</div>
-            <div style={{ fontWeight: 700, fontSize: '1.25rem', color: result.da_dat ? '#065f46' : '#991b1b' }}>
+    if (result && viewMode === 'quiz') return (
+        <div style={{ textAlign: 'center', padding: '2.5rem', background: result.da_dat ? '#f0fdf4' : '#fef2f2', borderRadius: '20px', border: `1px solid ${result.da_dat ? '#bbf7d0' : '#fecaca'}`, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)' }}>
+            <div style={{ fontSize: '4rem', marginBottom: '1.5rem', animation: 'bounce 1s infinite' }}>{result.da_dat ? '🎉' : '⚠️'}</div>
+            <div style={{ fontWeight: 800, fontSize: '1.5rem', color: result.da_dat ? '#065f46' : '#991b1b', marginBottom: '.5rem' }}>
                 {result.da_dat ? 'CHÚC MỪNG! BẠN ĐÃ ĐẠT' : 'CHƯA ĐẠT YÊU CẦU'}
             </div>
-            <div style={{ fontSize: '2rem', fontWeight: 800, margin: '1rem 0', color: 'var(--text-primary)' }}>
-                {result.diem_so} / {result.tong_diem}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', margin: '1.5rem 0' }}>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#1e293b' }}>{result.diem_so}</div>
+                    <div style={{ fontSize: '.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Điểm của bạn</div>
+                </div>
+                <div style={{ width: '2px', height: '40px', background: 'rgba(0,0,0,0.1)' }} />
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#94a3b8' }}>{result.tong_diem}</div>
+                    <div style={{ fontSize: '.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Tổng điểm</div>
+                </div>
             </div>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+            <p style={{ color: '#475569', marginBottom: '2rem', lineHeight: 1.6, maxWidth: '360px', margin: '0 auto 2rem' }}>
                 {result.da_dat 
                     ? 'Bạn đã hoàn thành tốt bài kiểm tra và đủ điều kiện để tiếp tục bài học tiếp theo.' 
                     : 'Rất tiếc, bạn cần đạt ít nhất 80% số điểm để hoàn thành bài này. Hãy xem lại kiến thức và thử lại!'}
             </p>
-            {!result.da_dat && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '300px', margin: '0 auto' }}>
                 <button 
-                    onClick={() => { setResult(null); setAnswers({}); }}
-                    style={{ padding: '.6rem 1.5rem', background: 'var(--text-primary)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}
+                    onClick={() => setViewMode('review')}
+                    style={{ padding: '1rem', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.5rem', transition: 'all .2s' }}
+                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
                 >
-                    Làm lại bài tập
+                    <MI name="visibility" style={{ fontSize: '1.2rem' }} /> Xem lại đáp án
                 </button>
-            )}
+                {!result.da_dat && (
+                    <button 
+                        onClick={() => { setResult(null); setAnswers({}); setViewMode('quiz'); }}
+                        style={{ padding: '1rem', background: '#fff', color: '#1e293b', border: '2px solid #e2e8f0', borderRadius: '14px', fontWeight: 700, cursor: 'pointer', transition: 'all .2s' }}
+                    >
+                        Làm lại bài tập
+                    </button>
+                )}
+            </div>
         </div>
     );
 
@@ -470,6 +489,38 @@ const QuizViewer = ({ lesson, onComplete }) => {
                 )}
             </div>
 
+            {/* Question Navigator */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.6rem', marginBottom: '1.5rem', padding: '1rem', background: '#fff', borderRadius: '16px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                {questions.map((_, i) => {
+                    const qId = questions[i].id_cau_hoi;
+                    const isAnswered = answers[qId] !== undefined;
+                    let bg = isAnswered ? '#eff6ff' : '#f8fafc';
+                    let text = isAnswered ? '#3b82f6' : '#94a3b8';
+                    let border = isAnswered ? '#3b82f6' : '#e2e8f0';
+
+                    if (viewMode === 'review' && result) {
+                        const detail = result.results_detail?.find(d => d.id_cau_hoi === qId);
+                        bg = detail?.is_correct ? '#f0fdf4' : '#fef2f2';
+                        text = detail?.is_correct ? '#10b981' : '#ef4444';
+                        border = detail?.is_correct ? '#10b981' : '#ef4444';
+                    }
+
+                    return (
+                        <div 
+                            key={i} 
+                            style={{ 
+                                width: 36, height: 36, borderRadius: '10px', 
+                                background: bg, color: text, border: `2px solid ${border}`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '.85rem', fontWeight: 800, transition: 'all .2s'
+                            }}
+                        >
+                            {i + 1}
+                        </div>
+                    );
+                })}
+            </div>
+
             {/* Modals */}
             <ModernModal 
                 isOpen={showIntro} 
@@ -496,32 +547,104 @@ const QuizViewer = ({ lesson, onComplete }) => {
                 {modalInfo?.message}
             </ModernModal>
 
-            {questions.map((q, qi) => (
-                <div key={q.id_cau_hoi} className="card" style={{ marginBottom: '1.25rem', boxShadow: 'var(--shadow-sm)' }}>
-                    <p style={{ fontWeight: 700, marginBottom: '1rem', fontSize: '1rem' }}>Câu {qi + 1}: {q.noi_dung}</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '.65rem' }}>
-                        {(q.lua_chon || []).map((opt) => {
-                            const sel = answers[q.id_cau_hoi] === opt.id_lua_chon;
-                            return (
-                                <label key={opt.id_lua_chon} style={{ display: 'flex', alignItems: 'center', gap: '.75rem', padding: '.8rem 1rem', borderRadius: '10px', cursor: 'pointer', border: `2px solid ${sel ? '#3b82f6' : 'var(--border)'}`, background: sel ? '#eff6ff' : '#fff', transition: 'all .2s' }}>
-                                    <div style={{ width: 20, height: 20, borderRadius: '50%', border: `2px solid ${sel ? '#3b82f6' : '#cbd5e1'}`, background: sel ? '#3b82f6' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                        {sel && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />}
-                                    </div>
-                                    <input type="radio" name={`q${q.id_cau_hoi}`} style={{ display: 'none' }} onChange={() => setAnswers(a => ({ ...a, [q.id_cau_hoi]: opt.id_lua_chon }))} />
-                                    <span style={{ fontSize: '.9rem', fontWeight: sel ? 600 : 400 }}>{opt.noi_dung}</span>
-                                </label>
-                            );
-                        })}
+            {questions.map((q, qi) => {
+                const qResult = result?.results_detail?.find(d => d.id_cau_hoi === q.id_cau_hoi);
+                const isReview = viewMode === 'review';
+
+                return (
+                    <div key={q.id_cau_hoi} className="card" style={{ 
+                        marginBottom: '1.25rem', boxShadow: 'var(--shadow-sm)',
+                        border: isReview ? `1px solid ${qResult?.is_correct ? '#10b981' : '#ef4444'}` : '1px solid var(--border)'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                            <p style={{ fontWeight: 700, fontSize: '1rem', margin: 0 }}>Câu {qi + 1}: {q.noi_dung}</p>
+                            {isReview && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', color: qResult?.is_correct ? '#10b981' : '#ef4444', fontWeight: 800, fontSize: '.85rem' }}>
+                                    <MI name={qResult?.is_correct ? 'check_circle' : 'cancel'} style={{ fontSize: '1.2rem' }} />
+                                    {qResult?.is_correct ? 'Đúng' : 'Sai'}
+                                </div>
+                            )}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '.65rem' }}>
+                            {(q.lua_chon || []).map((opt) => {
+                                const sel = answers[q.id_cau_hoi] === opt.id_lua_chon;
+                                const isCorrectAnswer = isReview && opt.id_lua_chon === qResult?.correct_choice_id;
+                                const isWrongSelection = isReview && sel && !qResult?.is_correct;
+
+                                let border = sel ? '#3b82f6' : 'var(--border)';
+                                let bg = sel ? '#eff6ff' : '#fff';
+                                if (isReview) {
+                                    if (isCorrectAnswer) {
+                                        border = '#10b981';
+                                        bg = '#f0fdf4';
+                                    } else if (isWrongSelection) {
+                                        border = '#ef4444';
+                                        bg = '#fef2f2';
+                                    } else {
+                                        border = 'var(--border)';
+                                        bg = '#fff';
+                                        if (sel) bg = '#f8fafc';
+                                    }
+                                }
+
+                                return (
+                                    <label key={opt.id_lua_chon} style={{ 
+                                        display: 'flex', alignItems: 'center', gap: '.75rem', 
+                                        padding: '.8rem 1rem', borderRadius: '12px', 
+                                        cursor: isReview ? 'default' : 'pointer', 
+                                        border: `2px solid ${border}`, 
+                                        background: bg, transition: 'all .2s' 
+                                    }}>
+                                        <div style={{ 
+                                            width: 20, height: 20, borderRadius: '50%', 
+                                            border: `2px solid ${sel || isCorrectAnswer ? border : '#cbd5e1'}`, 
+                                            background: sel || isCorrectAnswer ? border : '#fff', 
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 
+                                        }}>
+                                            {(sel || isCorrectAnswer) && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />}
+                                        </div>
+                                        <input 
+                                            type="radio" 
+                                            name={`q${q.id_cau_hoi}`} 
+                                            style={{ display: 'none' }} 
+                                            disabled={isReview}
+                                            onChange={() => setAnswers(a => ({ ...a, [q.id_cau_hoi]: opt.id_lua_chon }))} 
+                                        />
+                                        <span style={{ fontSize: '.9rem', fontWeight: sel || isCorrectAnswer ? 700 : 400, flex: 1 }}>{opt.noi_dung}</span>
+                                        {isCorrectAnswer && <MI name="check" style={{ color: '#10b981', fontSize: '1.2rem' }} />}
+                                        {isWrongSelection && <MI name="close" style={{ color: '#ef4444', fontSize: '1.2rem' }} />}
+                                    </label>
+                                );
+                            })}
+                        </div>
                     </div>
+                );
+            })}
+
+            {viewMode === 'quiz' ? (
+                <button
+                    onClick={handleSubmit}
+                    disabled={!allAnswered || submitting}
+                    style={{ width: '100%', padding: '1rem', background: allAnswered ? '#2563eb' : '#94a3b8', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: allAnswered ? 'pointer' : 'not-allowed', fontSize: '1.1rem', transition: 'all .2s', boxShadow: allAnswered ? '0 10px 20px rgba(37,99,235,0.2)' : 'none' }}
+                >
+                    {submitting ? 'ĐANG NỘP BÀI...' : allAnswered ? '✅ Nộp bài ngay' : `Vui lòng trả lời đủ ${questions.length} câu`}
+                </button>
+            ) : (
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                    <button
+                        onClick={() => { setResult(null); setAnswers({}); setViewMode('quiz'); }}
+                        style={{ flex: 1, padding: '1rem', background: '#fff', color: '#1e293b', border: '2px solid #e2e8f0', borderRadius: '14px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                        Làm lại bài tập
+                    </button>
+                    <button
+                        onClick={onComplete}
+                        style={{ flex: 1, padding: '1rem', background: '#10b981', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                        Tiếp tục bài học
+                    </button>
                 </div>
-            ))}
-            <button
-                onClick={handleSubmit}
-                disabled={!allAnswered || submitting}
-                style={{ width: '100%', padding: '1rem', background: allAnswered ? '#2563eb' : '#94a3b8', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: allAnswered ? 'pointer' : 'not-allowed', fontSize: '1.1rem', transition: 'all .2s', boxShadow: allAnswered ? '0 10px 20px rgba(37,99,235,0.2)' : 'none' }}
-            >
-                {submitting ? 'ĐANG NỘP BÀI...' : allAnswered ? '✅ Nộp bài ngay' : `Vui lòng trả lời đủ ${questions.length} câu`}
-            </button>
+            )}
         </div>
     );
 };

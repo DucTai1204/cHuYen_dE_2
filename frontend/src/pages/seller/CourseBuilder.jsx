@@ -142,13 +142,15 @@ const ChapterBlock = ({ chapter, selectedLesson, onSelectLesson, onDeleteLesson,
 /* ── Quiz Editor ── */
 const QuizEditor = ({ lesson, onUpdate }) => {
     const [questions, setQuestions] = useState(lesson.cau_hoi || []);
-    const [loading, setLoading] = useState(false);
 
-    // Đồng bộ khi lesson thay đổi
     useEffect(() => { setQuestions(lesson.cau_hoi || []); }, [lesson.id_bai_giang]);
 
     const addQuestion = async () => {
         try {
+            if (!lesson.id_bai_giang) {
+                alert('Không tìm thấy ID bài giảng. Vui lòng lưu bài giảng trước.');
+                return;
+            }
             const res = await api.post('/lms/cau-hoi/', {
                 id_bai_giang: lesson.id_bai_giang,
                 noi_dung: 'Tên câu hỏi mới?',
@@ -158,7 +160,21 @@ const QuizEditor = ({ lesson, onUpdate }) => {
             const newQs = [...questions, { ...res.data, lua_chon: [] }];
             setQuestions(newQs);
             onUpdate(newQs);
-        } catch (e) { alert('Lỗi thêm câu hỏi'); }
+        } catch (e) { 
+            console.error('Add question error:', e);
+            alert('Lỗi thêm câu hỏi: ' + (e.response?.data?.detail || e.message || 'Lỗi không xác định'));
+        }
+    };
+
+    const updateQuestion = async (qId, data) => {
+        try {
+            const res = await api.patch(`/lms/cau-hoi/${qId}/`, data);
+            const newQs = questions.map(q => q.id_cau_hoi === qId ? { ...q, ...res.data } : q);
+            setQuestions(newQs);
+            onUpdate(newQs);
+        } catch (e) {
+            console.error('Update question error:', e);
+        }
     };
 
     const deleteQuestion = async (qId) => {
@@ -168,16 +184,9 @@ const QuizEditor = ({ lesson, onUpdate }) => {
             const newQs = questions.filter(q => q.id_cau_hoi !== qId);
             setQuestions(newQs);
             onUpdate(newQs);
-        } catch (e) { alert('Lỗi xóa câu hỏi'); }
-    };
-
-    const updateQuestion = async (qId, data) => {
-        try {
-            const res = await api.patch(`/lms/cau-hoi/${qId}/`, data);
-            const newQs = questions.map(q => q.id_cau_hoi === qId ? { ...q, ...res.data } : q);
-            setQuestions(newQs);
-            onUpdate(newQs);
-        } catch (e) { }
+        } catch (e) {
+            alert('Lỗi xóa câu hỏi');
+        }
     };
 
     const addChoice = async (qId) => {
@@ -195,7 +204,9 @@ const QuizEditor = ({ lesson, onUpdate }) => {
             });
             setQuestions(newQs);
             onUpdate(newQs);
-        } catch (e) { }
+        } catch (e) {
+            alert('Lỗi thêm lựa chọn');
+        }
     };
 
     const deleteChoice = async (qId, cId) => {
@@ -209,18 +220,16 @@ const QuizEditor = ({ lesson, onUpdate }) => {
             });
             setQuestions(newQs);
             onUpdate(newQs);
-        } catch (e) { }
+        } catch (e) {
+            alert('Lỗi xóa lựa chọn');
+        }
     };
 
     const setCorrectChoice = async (qId, cId) => {
-        // Một câu hỏi chỉ có 1 đáp án đúng (tạm thời)
         const q = questions.find(x => x.id_cau_hoi === qId);
         if (!q) return;
 
         try {
-            // Backend update cho tất cả các choices của câu hỏi này
-            // Nhưng để đơn giản, ta lặp qua update từng cái hoặc check logic
-            // Ở đây ta đơn giản là patch cái được chọn thành true, những cái khác thành false
             await Promise.all(q.lua_chon.map(c => {
                 return api.patch(`/lms/lua-chon/${c.id_lua_chon}/`, { la_dap_an_dung: c.id_lua_chon === cId });
             }));
@@ -236,7 +245,42 @@ const QuizEditor = ({ lesson, onUpdate }) => {
             });
             setQuestions(newQs);
             onUpdate(newQs);
-        } catch (e) { }
+        } catch (e) {
+            console.error('Set correct choice error:', e);
+            alert('Lỗi khi cập nhật đáp án đúng. Vui lòng thử lại.');
+        }
+    };
+
+    const duplicateQuestion = async (qId) => {
+        const q = questions.find(x => x.id_cau_hoi === qId);
+        if (!q) return;
+        try {
+            const res = await api.post('/lms/cau-hoi/', {
+                id_bai_giang: lesson.id_bai_giang,
+                noi_dung: q.noi_dung + ' (Bản sao)',
+                diem: q.diem,
+                thu_tu: questions.length + 1
+            });
+            const newQ = { ...res.data, lua_chon: [] };
+            
+            // Sao chép các lựa chọn
+            if (q.lua_chon && q.lua_chon.length > 0) {
+                const choicesRes = await Promise.all(q.lua_chon.map(c => 
+                    api.post('/lms/lua-chon/', {
+                        id_cau_hoi: newQ.id_cau_hoi,
+                        noi_dung: c.noi_dung,
+                        la_dap_an_dung: c.la_dap_an_dung
+                    })
+                ));
+                newQ.lua_chon = choicesRes.map(r => r.data);
+            }
+
+            const newQs = [...questions, newQ];
+            setQuestions(newQs);
+            onUpdate(newQs);
+        } catch (e) {
+            alert('Lỗi khi sao chép câu hỏi');
+        }
     };
 
     const updateChoiceContent = async (qId, cId, text) => {
@@ -264,79 +308,131 @@ const QuizEditor = ({ lesson, onUpdate }) => {
                 </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 {questions.map((q, idx) => (
-                    <div key={q.id_cau_hoi} style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '10px', padding: '.75rem' }}>
-                        <div style={{ display: 'flex', gap: '.5rem', marginBottom: '.5rem' }}>
-                            <span style={{ fontSize: '.8rem', fontWeight: 700, color: 'var(--text-muted)', paddingTop: '.4rem' }}>#{idx+1}</span>
+                    <div key={q.id_cau_hoi} style={{ 
+                        background: '#fff', border: '1px solid var(--border)', 
+                        borderRadius: '16px', padding: '1.5rem',
+                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)',
+                        transition: 'all .2s ease'
+                    }}>
+                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem' }}>
+                            <div style={{ 
+                                width: 32, height: 32, borderRadius: '50%', background: SELLER_ORANGE_LIGHT,
+                                color: SELLER_ORANGE_DARK, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '.9rem', fontWeight: 800, flexShrink: 0, marginTop: '.2rem'
+                            }}>
+                                {idx + 1}
+                            </div>
                             <div style={{flex: 1}}>
+                                <label style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '.5rem', display: 'block' }}>Nội dung câu hỏi</label>
                                 <textarea 
                                     className="form-input" 
-                                    rows={2} 
+                                    rows={3} 
                                     value={q.noi_dung} 
                                     onChange={e => updateQuestion(q.id_cau_hoi, { noi_dung: e.target.value })}
-                                    style={{ fontSize: '.82rem', padding: '.4rem', marginBottom: '.4rem' }}
-                                    placeholder="Nội dung câu hỏi..."
+                                    style={{ fontSize: '1rem', padding: '.8rem', marginBottom: '1rem', borderRadius: '12px', border: '1px solid var(--border)', width: '100%' }}
+                                    placeholder="VD: React Hook nào được dùng để quản lý state?"
                                 />
-                                <div style={{display: 'flex', gap: '1rem', alignItems: 'center'}}>
-                                    <div style={{fontSize: '.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '.2rem'}}>
-                                        Điểm: <input type="number" value={q.diem} onChange={e => updateQuestion(q.id_cau_hoi, {diem: parseInt(e.target.value)||0})} style={{width: 40, border: '1px solid var(--border)', borderRadius: '4px', textAlign: 'center', fontSize: '.75rem'}} />
+                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem'}}>
+                                    <div style={{fontSize: '.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '.5rem', background: 'var(--bg-app)', padding: '.4rem .8rem', borderRadius: '8px'}}>
+                                        <MI name="stars" style={{ color: '#f59e0b', fontSize: '1.1rem' }} />
+                                        Điểm: 
+                                        <input 
+                                            type="number" 
+                                            value={q.diem} 
+                                            onChange={e => updateQuestion(q.id_cau_hoi, {diem: parseInt(e.target.value)||0})} 
+                                            style={{width: 50, border: '1px solid var(--border)', borderRadius: '6px', textAlign: 'center', fontSize: '.9rem', fontWeight: 700, padding: '.2rem'}} 
+                                        />
                                     </div>
-                                    <button onClick={() => deleteQuestion(q.id_cau_hoi)} style={{marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--danger)', fontSize: '.7rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '.1rem'}}>
-                                        <MI name="delete" style={{fontSize: '.9rem'}} /> Xóa câu hỏi
+                                    <button 
+                                        onClick={() => duplicateQuestion(q.id_cau_hoi)} 
+                                        style={{ background: 'var(--bg-app)', border: '1px solid var(--border)', color: 'var(--text-secondary)', padding: '.4rem .8rem', borderRadius: '8px', fontSize: '.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '.3rem', transition: 'all .2s' }}
+                                    >
+                                        <MI name="content_copy" style={{fontSize: '1rem'}} /> Nhân bản
+                                    </button>
+                                    <button 
+                                        onClick={() => deleteQuestion(q.id_cau_hoi)} 
+                                        style={{ background: '#fef2f2', border: '1px solid #fee2e2', color: '#dc2626', padding: '.4rem .8rem', borderRadius: '8px', fontSize: '.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '.3rem', transition: 'all .2s' }}
+                                        onMouseEnter={e => e.currentTarget.style.background = '#fee2e2'}
+                                        onMouseLeave={e => e.currentTarget.style.background = '#fef2f2'}
+                                    >
+                                        <MI name="delete_outline" style={{fontSize: '1rem'}} /> Xóa câu hỏi
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Choices list */}
-                        <div style={{ paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
-                            {(q.lua_chon || []).map((c, cidx) => (
-                                <div 
-                                    key={c.id_lua_chon} 
-                                    style={{ 
-                                        display: 'flex', alignItems: 'center', gap: '.5rem', 
-                                        padding: '.4rem .6rem', borderRadius: '8px',
-                                        background: c.la_dap_an_dung ? '#f0fdf4' : 'var(--bg-app)',
-                                        border: `1px solid ${c.la_dap_an_dung ? '#10b981' : 'var(--border)'}`,
-                                        transition: 'all .2s'
-                                    }}
-                                >
+                        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.25rem' }}>
+                            <label style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '.75rem', display: 'block' }}>Các phương án trả lời</label>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '.6rem' }}>
+                                {(q.lua_chon || []).map((c, cidx) => (
                                     <div 
-                                        onClick={() => setCorrectChoice(q.id_cau_hoi, c.id_lua_chon)}
-                                        title={c.la_dap_an_dung ? "Đang là đáp án đúng" : "Chọn làm đáp án đúng"}
+                                        key={c.id_lua_chon} 
                                         style={{ 
-                                            cursor: 'pointer', 
-                                            color: c.la_dap_an_dung ? '#10b981' : '#94a3b8',
-                                            display: 'flex', alignItems: 'center', gap: '.3rem',
-                                            flexShrink: 0,
-                                            userSelect: 'none'
+                                            display: 'flex', alignItems: 'center', gap: '.75rem', 
+                                            padding: '.75rem 1rem', borderRadius: '12px',
+                                            background: c.la_dap_an_dung ? '#f0fdf4' : '#fff',
+                                            border: `1px solid ${c.la_dap_an_dung ? '#10b981' : 'var(--border)'}`,
+                                            boxShadow: c.la_dap_an_dung ? '0 2px 8px rgba(16, 185, 129, 0.1)' : 'none',
+                                            transition: 'all .2s'
                                         }}
                                     >
-                                        <MI name={c.la_dap_an_dung ? 'check_circle' : 'radio_button_unchecked'} style={{ fontSize: '1.1rem' }} />
-                                        {c.la_dap_an_dung && <span style={{ fontSize: '.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.02em' }}>Đáp án đúng</span>}
+                                        <div 
+                                            onClick={() => setCorrectChoice(q.id_cau_hoi, c.id_lua_chon)}
+                                            style={{ 
+                                                cursor: 'pointer', 
+                                                color: c.la_dap_an_dung ? '#10b981' : '#cbd5e1',
+                                                display: 'flex', alignItems: 'center', gap: '.5rem',
+                                                flexShrink: 0,
+                                                userSelect: 'none'
+                                            }}
+                                        >
+                                            <MI name={c.la_dap_an_dung ? 'check_circle' : 'radio_button_unchecked'} style={{ fontSize: '1.4rem' }} />
+                                            {c.la_dap_an_dung && <span style={{ fontSize: '.65rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', background: '#d1fae5', padding: '.2rem .5rem', borderRadius: '4px' }}>Đúng</span>}
+                                        </div>
+                                        <input 
+                                            className="form-input"
+                                            value={c.noi_dung}
+                                            onChange={e => updateChoiceContent(q.id_cau_hoi, c.id_lua_chon, e.target.value)}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    addChoice(q.id_cau_hoi);
+                                                }
+                                            }}
+                                            autoFocus={c.noi_dung === 'Lựa chọn mới'}
+                                            style={{ 
+                                                fontSize: '.95rem', padding: '.3rem', flex: 1, 
+                                                border: 'none', background: 'transparent', outline: 'none',
+                                                fontWeight: c.la_dap_an_dung ? 600 : 400
+                                            }}
+                                            placeholder="Nhập phương án..."
+                                        />
+                                        <button 
+                                            onClick={() => deleteChoice(q.id_cau_hoi, c.id_lua_chon)} 
+                                            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '.4rem', borderRadius: '50%' }}
+                                            onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                                        >
+                                            <MI name="close" style={{ fontSize: '1.1rem' }} />
+                                        </button>
                                     </div>
-                                    <input 
-                                        className="form-input"
-                                        value={c.noi_dung}
-                                        onChange={e => updateChoiceContent(q.id_cau_hoi, c.id_lua_chon, e.target.value)}
-                                        style={{ 
-                                            fontSize: '.78rem', padding: '.2rem .4rem', flex: 1, 
-                                            border: 'none', background: 'transparent', outline: 'none'
-                                        }}
-                                        placeholder="Nội dung lựa chọn..."
-                                    />
-                                    <button 
-                                        onClick={() => deleteChoice(q.id_cau_hoi, c.id_lua_chon)} 
-                                        style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '.75rem', display: 'flex', alignItems: 'center' }}
-                                    >
-                                        <MI name="close" style={{ fontSize: '.9rem' }} />
-                                    </button>
-                                </div>
-                            ))}
-                            <button onClick={() => addChoice(q.id_cau_hoi)} style={{ alignSelf: 'flex-start', background: 'none', border: 'none', color: SELLER_ORANGE, fontSize: '.75rem', fontWeight: 700, cursor: 'pointer', marginTop: '.2rem', display: 'flex', alignItems: 'center', gap: '.2rem' }}>
-                                <MI name="add_circle_outline" style={{ fontSize: '.9rem' }} /> Thêm phương án
-                            </button>
+                                ))}
+                                <button 
+                                    onClick={() => addChoice(q.id_cau_hoi)} 
+                                    style={{ 
+                                        alignSelf: 'flex-start', background: 'none', border: `1px dashed ${SELLER_ORANGE}`, 
+                                        color: SELLER_ORANGE, fontSize: '.8rem', fontWeight: 700, cursor: 'pointer', 
+                                        marginTop: '.5rem', display: 'flex', alignItems: 'center', gap: '.4rem',
+                                        padding: '.6rem 1.25rem', borderRadius: '10px', transition: 'all .2s'
+                                    }}
+                                    onMouseEnter={e => e.currentTarget.style.background = SELLER_ORANGE_LIGHT}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                                >
+                                    <MI name="add_circle_outline" style={{ fontSize: '1.1rem' }} /> Thêm phương án
+                                </button>
+                            </div>
                         </div>
                     </div>
                 ))}
@@ -347,15 +443,37 @@ const QuizEditor = ({ lesson, onUpdate }) => {
 };
 
 /* ── Lesson Editor Panel ── */
-const LessonEditor = ({ lesson, onSave, onClose }) => {
+const LessonEditor = ({ lesson, onSave, onClose, isExpanded, setIsExpanded }) => {
     const [form, setForm] = useState({ ...lesson });
     const [saving, setSaving] = useState(false);
 
     useEffect(() => { setForm({ ...lesson }); }, [lesson?.id_bai_giang]);
 
-    const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
+    const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+    const hasChanges = React.useMemo(() => {
+        if (!lesson) return false;
+        
+        // Tạo bản sao sạch để so sánh
+        const cleanForm = { ...form };
+        const cleanLesson = { ...lesson };
+        
+        // Loại bỏ các trường không cần thiết hoặc gây nhiễu
+        const ignoreFields = ['ngay_tao', 'ngay_cap_nhat'];
+        ignoreFields.forEach(f => {
+            delete cleanForm[f];
+            delete cleanLesson[f];
+        });
+
+        // Đảm bảo cau_hoi là mảng để so sánh JSON chính xác
+        if (!cleanForm.cau_hoi) cleanForm.cau_hoi = [];
+        if (!cleanLesson.cau_hoi) cleanLesson.cau_hoi = [];
+
+        return JSON.stringify(cleanForm) !== JSON.stringify(cleanLesson);
+    }, [form, lesson]);
 
     const save = async () => {
+        if (!hasChanges) return;
         setSaving(true);
         await onSave(form);
         setSaving(false);
@@ -365,13 +483,27 @@ const LessonEditor = ({ lesson, onSave, onClose }) => {
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             {/* Editor Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', paddingBottom: '.75rem', borderBottom: '1px solid var(--border)' }}>
-                <div>
-                    <div style={{ fontSize: '.72rem', color: 'var(--text-muted)', marginBottom: '.2rem' }}>Đang chỉnh sửa</div>
-                    <h3 style={{ fontWeight: 700, fontSize: '.95rem', color: 'var(--text-primary)' }}>
-                        <MI name={typeIcon(form.loai_bai)} style={{ fontSize: '1.1rem' }} /> {typeLabel(form.loai_bai)}
-                    </h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
+                    <button 
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        title={isExpanded ? "Thu nhỏ" : "Phóng to toàn màn hình"}
+                        style={{ 
+                            background: 'var(--bg-app)', border: '1px solid var(--border)', 
+                            borderRadius: '6px', width: 32, height: 32, cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: 'var(--text-secondary)', transition: 'all .2s'
+                        }}
+                    >
+                        <MI name={isExpanded ? 'fullscreen_exit' : 'fullscreen'} style={{ fontSize: '1.2rem' }} />
+                    </button>
+                    <div>
+                        <div style={{ fontSize: '.72rem', color: 'var(--text-muted)', marginBottom: '.1rem' }}>Đang chỉnh sửa</div>
+                        <h3 style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+                            <MI name={typeIcon(form.loai_bai)} style={{ fontSize: '1.2rem', color: SELLER_ORANGE }} /> {typeLabel(form.loai_bai)}
+                        </h3>
+                    </div>
                 </div>
-                <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '1.1rem' }}>✕</button>
+                <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '1.2rem', padding: '.5rem', borderRadius: '50%' }}>✕</button>
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', paddingRight: '.5rem' }}>
@@ -495,16 +627,28 @@ const LessonEditor = ({ lesson, onSave, onClose }) => {
             </div>
 
             {/* Save Button */}
-            <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--border)', marginTop: '1rem' }}>
+            <div style={{ 
+                paddingTop: '1rem', borderTop: '1px solid var(--border)', marginTop: '1rem',
+                position: 'sticky', bottom: 0, background: '#fff', zIndex: 10, paddingBottom: '.5rem'
+            }}>
+                {hasChanges && (
+                    <div style={{ fontSize: '.72rem', color: SELLER_ORANGE, fontWeight: 700, textAlign: 'center', marginBottom: '.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.3rem' }}>
+                        <MI name="error_outline" style={{ fontSize: '.9rem' }} /> Có thay đổi chưa lưu!
+                    </div>
+                )}
                 <button
-                    onClick={save} disabled={saving}
+                    onClick={save} disabled={saving || !hasChanges}
                     style={{
-                        width: '100%', padding: '.7rem', background: SELLER_ORANGE, color: '#fff',
-                        border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer',
-                        fontSize: '.9rem', opacity: saving ? .7 : 1, transition: 'all .18s',
+                        width: '100%', padding: '.8rem', 
+                        background: (saving || !hasChanges) ? '#e2e8f0' : SELLER_ORANGE, 
+                        color: (saving || !hasChanges) ? '#94a3b8' : '#fff',
+                        border: 'none', borderRadius: '12px', fontWeight: 700, 
+                        cursor: (saving || !hasChanges) ? 'not-allowed' : 'pointer',
+                        fontSize: '.95rem', opacity: saving ? .7 : 1, transition: 'all .2s',
+                        boxShadow: (saving || !hasChanges) ? 'none' : '0 4px 12px rgba(251, 146, 60, 0.3)'
                     }}
                 >
-                    {saving ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem' }}><MI name="hourglass_empty" style={{ fontSize: '1rem' }} /> Đang lưu...</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem' }}><MI name="save" style={{ fontSize: '1rem' }} /> Lưu bài giảng</span>}
+                    {saving ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.4rem' }}><MI name="hourglass_empty" style={{ fontSize: '1.1rem' }} /> Đang lưu...</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.4rem' }}><MI name="save" style={{ fontSize: '1.1rem' }} /> Lưu bài giảng</span>}
                 </button>
             </div>
         </div>
@@ -529,6 +673,18 @@ const SettingsTab = ({ course, onUpdate, showToast }) => {
     });
     const [saving, setSaving] = useState(false);
     const [previewingVideo, setPreviewingVideo] = useState(false);
+
+    const hasChanges = 
+        form.ten_khoa_hoc !== (course.ten_khoa_hoc || '') ||
+        form.mo_ta_ngan !== (course.mo_ta_ngan || '') ||
+        form.mo_ta_chi_tiet !== (course.mo_ta_chi_tiet || '') ||
+        form.danh_muc !== (course.danh_muc || '') ||
+        form.trinh_do !== (course.trinh_do || 'CoSo') ||
+        Number(form.gia_tien) !== (course.gia_tien || 0) ||
+        Number(form.gia_goc) !== (course.gia_goc || 0) ||
+        form.hinh_anh_thumbnail !== (course.hinh_anh_thumbnail || '') ||
+        form.url_video_preview !== (course.url_video_preview || '') ||
+        form.is_sequential !== (course.is_sequential || false);
 
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -747,11 +903,14 @@ const SettingsTab = ({ course, onUpdate, showToast }) => {
 
             {/* Save Button */}
             <button
-                onClick={handleSave} disabled={saving}
+                onClick={handleSave} disabled={saving || !hasChanges}
                 style={{
-                    padding: '.75rem 2rem', background: SELLER_ORANGE, color: '#fff',
-                    border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer',
-                    fontSize: '.95rem', opacity: saving ? .7 : 1,
+                    padding: '.75rem 2rem', 
+                    background: (saving || !hasChanges) ? '#e2e8f0' : SELLER_ORANGE, 
+                    color: (saving || !hasChanges) ? '#94a3b8' : '#fff',
+                    border: 'none', borderRadius: '8px', fontWeight: 600, 
+                    cursor: (saving || !hasChanges) ? 'not-allowed' : 'pointer',
+                    fontSize: '.95rem', opacity: saving ? .7 : 1, transition: 'all .18s',
                 }}
             >
                 {saving ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem' }}><MI name="hourglass_empty" style={{ fontSize: '1rem' }} /> Đang lưu...</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem' }}><MI name="save" style={{ fontSize: '1rem' }} /> Lưu thay đổi</span>}
@@ -1018,6 +1177,7 @@ const CourseBuilder = () => {
     const [activeTab, setActiveTab] = useState('content');
     const [publishing, setPublishing] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [isEditorExpanded, setIsEditorExpanded] = useState(false);
     const [toast, setToast] = useState(null);
 
     const showToast = (msg, type = 'success') => {
@@ -1223,9 +1383,26 @@ const CourseBuilder = () => {
 
                 {/* TAB: Nội dung khóa học */}
                 {activeTab === 'content' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: selectedLesson ? '300px 1fr' : '1fr', gap: '1rem', flex: 1, overflow: 'hidden', transition: 'grid-template-columns .2s' }}>
+                    <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: (selectedLesson && isEditorExpanded) ? '0fr 1fr' : (selectedLesson ? '300px 1fr' : '1fr'), 
+                        gap: (selectedLesson && isEditorExpanded) ? '0' : '1rem', 
+                        flex: 1, 
+                        overflow: 'hidden', 
+                        transition: 'all .3s ease-in-out' 
+                    }}>
                         {/* LEFT: Chapter Tree */}
-                        <div className="card" style={{ overflow: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column' }}>
+                        <div className="card" style={{ 
+                            overflow: 'auto', 
+                            padding: (selectedLesson && isEditorExpanded) ? '0' : '1rem', 
+                            display: 'flex', 
+                            flexDirection: 'column',
+                            opacity: (selectedLesson && isEditorExpanded) ? 0 : 1,
+                            visibility: (selectedLesson && isEditorExpanded) ? 'hidden' : 'visible',
+                            width: (selectedLesson && isEditorExpanded) ? 0 : 'auto',
+                            transition: 'all .3s ease-in-out',
+                            border: (selectedLesson && isEditorExpanded) ? 'none' : '1px solid var(--border)',
+                        }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                                 <h3 style={{ fontWeight: 700, fontSize: '.875rem' }}>🗂 Chương trình học</h3>
                                 <button
@@ -1271,6 +1448,8 @@ const CourseBuilder = () => {
                                     lesson={selectedLesson}
                                     onSave={saveLesson}
                                     onClose={() => setSelectedLesson(null)}
+                                    isExpanded={isEditorExpanded}
+                                    setIsExpanded={setIsEditorExpanded}
                                 />
                             </div>
                         ) : null}
