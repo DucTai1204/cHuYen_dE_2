@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import api from '../services/api';
 
 const AuthContext = createContext();
@@ -59,8 +59,8 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
     };
 
-    const openAuthModal = (type = 'login') => setAuthModal({ isOpen: true, type });
-    const closeAuthModal = () => setAuthModal({ isOpen: false, type: 'login' });
+    const openAuthModal = useCallback((type = 'login') => setAuthModal({ isOpen: true, type }), []);
+    const closeAuthModal = useCallback(() => setAuthModal({ isOpen: false, type: 'login' }), []);
 
     return (
         <AuthContext.Provider value={{

@@ -78,7 +78,7 @@ const SellerSidebar = () => {
             {/* Bottom */}
             <div className="sidebar-bottom">
                 <button className="nav-item" style={{ color: '#ff6b6b', width: '100%' }}
-                    onClick={() => { logout(); navigate('/login'); }}>
+                    onClick={() => { logout(); navigate('/'); }}>
                     <span className="nav-icon"><MI name="logout" /></span> Đăng xuất
                 </button>
             </div>

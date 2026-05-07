@@ -60,7 +60,6 @@ const Navbar = () => {
     const handleLogout = () => {
         logout();
         navigate('/');
-        openAuthModal('login');
     };
 
     return (

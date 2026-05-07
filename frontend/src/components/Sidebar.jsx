@@ -97,7 +97,7 @@ const Sidebar = () => {
 
             {/* Bottom Logout */}
             <div className="sidebar-bottom">
-                <button className="nav-item" style={{ color: 'var(--danger)', width: '100%' }} onClick={() => { logout(); navigate('/login'); }}>
+                <button className="nav-item" style={{ color: 'var(--danger)', width: '100%' }} onClick={() => { logout(); navigate('/'); }}>
                     <span className="nav-icon"><MI name="logout" /></span>
                     Đăng xuất
                 </button>
