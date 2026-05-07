@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 
@@ -37,20 +37,26 @@ const Toast = ({ msg, type = 'success' }) => (
 ══════════════════════════════════════════════════════════════ */
 
 /* ── Lesson Row ── */
-const LessonRow = ({ lesson, isSelected, onClick, onDelete }) => (
+const LessonRow = ({ lesson, isSelected, onClick, onDelete, onDragStart, onDragOver, onDrop, onDragEnd }) => (
     <div
         onClick={() => onClick(lesson)}
+        draggable
+        onDragStart={e => onDragStart && onDragStart(e, lesson)}
+        onDragOver={e => { e.preventDefault(); if (onDragOver) onDragOver(e, lesson); }}
+        onDrop={e => onDrop && onDrop(e, lesson)}
+        onDragEnd={e => onDragEnd && onDragEnd(e)}
         style={{
             display: 'flex', alignItems: 'center', gap: '.5rem',
-            padding: '.4rem .75rem .4rem 2.25rem',
+            padding: '.4rem .75rem .4rem 1.5rem',
             borderRadius: '6px', cursor: 'pointer',
             background: isSelected ? SELLER_ORANGE_LIGHT : 'transparent',
             border: isSelected ? `1px solid #fcd34d` : '1px solid transparent',
-            transition: 'all .15s', marginBottom: '.15rem',
+            marginBottom: '.15rem',
         }}
-        onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = '#f8fafc'; }}
-        onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
     >
+        <span style={{ cursor: 'grab', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', flexShrink: 0 }} title="Kéo để sắp xếp">
+            <MI name="drag_indicator" style={{ fontSize: '.85rem' }} />
+        </span>
         <span style={{ fontSize: '.78rem', color: 'var(--text-muted)', width: 16, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
             <MI name={typeIcon(lesson.loai_bai)} style={{ fontSize: '.9rem' }} />
         </span>
@@ -78,12 +84,34 @@ const LessonRow = ({ lesson, isSelected, onClick, onDelete }) => (
 );
 
 /* ── Chapter Block ── */
-const ChapterBlock = ({ chapter, selectedLesson, onSelectLesson, onDeleteLesson, onAddLesson, onDeleteChapter, onRenameChapter }) => {
+const ChapterBlock = ({ chapter, selectedLesson, onSelectLesson, onDeleteLesson, onAddLesson, onDeleteChapter, onRenameChapter, onReorderLesson }) => {
     const [open, setOpen] = useState(true);
     const [renaming, setRenaming] = useState(false);
     const [name, setName] = useState(chapter.ten_chuong);
+    const dragItem = useRef(null);
 
     const saveRename = () => { if (name.trim()) { onRenameChapter(chapter.id_chuong, name); } setRenaming(false); };
+
+    const handleDragStart = (e, lesson) => {
+        dragItem.current = lesson;
+        e.dataTransfer.effectAllowed = 'move';
+        e.currentTarget.style.opacity = '0.4';
+    };
+    const handleDragOver = (e, lesson) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    };
+    const handleDrop = (e, targetLesson) => {
+        e.preventDefault();
+        if (dragItem.current && dragItem.current.id_bai_giang !== targetLesson.id_bai_giang) {
+            onReorderLesson(chapter.id_chuong, dragItem.current.id_bai_giang, targetLesson.id_bai_giang);
+        }
+        dragItem.current = null;
+    };
+    const handleDragEnd = (e) => {
+        e.currentTarget.style.opacity = '1';
+        dragItem.current = null;
+    };
 
     return (
         <div style={{ marginBottom: '.35rem' }}>
@@ -130,6 +158,8 @@ const ChapterBlock = ({ chapter, selectedLesson, onSelectLesson, onDeleteLesson,
                                 key={l.id_bai_giang} lesson={l}
                                 isSelected={selectedLesson?.id_bai_giang === l.id_bai_giang}
                                 onClick={onSelectLesson} onDelete={onDeleteLesson}
+                                onDragStart={handleDragStart} onDragOver={handleDragOver}
+                                onDrop={handleDrop} onDragEnd={handleDragEnd}
                             />
                         ))
                     )}
@@ -142,6 +172,7 @@ const ChapterBlock = ({ chapter, selectedLesson, onSelectLesson, onDeleteLesson,
 /* ── Quiz Editor ── */
 const QuizEditor = ({ lesson, onUpdate }) => {
     const [questions, setQuestions] = useState(lesson.cau_hoi || []);
+    const [expandedQ, setExpandedQ] = useState(null);
 
     useEffect(() => { setQuestions(lesson.cau_hoi || []); }, [lesson.id_bai_giang]);
 
@@ -157,10 +188,22 @@ const QuizEditor = ({ lesson, onUpdate }) => {
                 diem: 1,
                 thu_tu: questions.length + 1
             });
-            const newQs = [...questions, { ...res.data, lua_chon: [] }];
+            const newQ = { ...res.data, lua_chon: [] };
+            const newQs = [...questions, newQ];
             setQuestions(newQs);
             onUpdate(newQs);
-        } catch (e) { 
+
+            // Set mở sẵn câu hỏi mới
+            setExpandedQ(newQ.id_cau_hoi);
+
+            // Tự động cuộn xuống cuối sau khi DOM render
+            setTimeout(() => {
+                const el = document.getElementById(`q-${newQ.id_cau_hoi}`);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 100);
+        } catch (e) {
             console.error('Add question error:', e);
             alert('Lỗi thêm câu hỏi: ' + (e.response?.data?.detail || e.message || 'Lỗi không xác định'));
         }
@@ -262,10 +305,10 @@ const QuizEditor = ({ lesson, onUpdate }) => {
                 thu_tu: questions.length + 1
             });
             const newQ = { ...res.data, lua_chon: [] };
-            
+
             // Sao chép các lựa chọn
             if (q.lua_chon && q.lua_chon.length > 0) {
-                const choicesRes = await Promise.all(q.lua_chon.map(c => 
+                const choicesRes = await Promise.all(q.lua_chon.map(c =>
                     api.post('/lms/lua-chon/', {
                         id_cau_hoi: newQ.id_cau_hoi,
                         noi_dung: c.noi_dung,
@@ -298,145 +341,72 @@ const QuizEditor = ({ lesson, onUpdate }) => {
     }
 
     return (
-        <div style={{ marginTop: '1rem', borderTop: '1px dashed var(--border)', paddingTop: '1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '.75rem' }}>
-                <h4 style={{ fontSize: '.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '.3rem' }}>
-                    <MI name="quiz" style={{ color: SELLER_ORANGE }} /> Danh sách câu hỏi ({questions.length})
-                </h4>
-                <button onClick={addQuestion} style={{ padding: '.3rem .6rem', background: SELLER_ORANGE_LIGHT, color: SELLER_ORANGE_DARK, border: `1px solid ${SELLER_ORANGE}`, borderRadius: '6px', fontSize: '.7rem', fontWeight: 700, cursor: 'pointer' }}>
-                    + Thêm câu hỏi
-                </button>
+        <div style={{ marginTop: '.75rem', borderTop: '1px dashed var(--border)', paddingTop: '.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '.5rem' }}>
+                <span style={{ fontSize: '.8rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '.3rem' }}>
+                    <MI name="quiz" style={{ color: SELLER_ORANGE, fontSize: '1rem' }} /> {questions.length} câu hỏi
+                </span>
+                <button onClick={addQuestion} style={{ padding: '.25rem .5rem', background: SELLER_ORANGE, color: '#fff', border: 'none', borderRadius: '5px', fontSize: '.7rem', fontWeight: 600, cursor: 'pointer' }}>+ Thêm</button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                {questions.map((q, idx) => (
-                    <div key={q.id_cau_hoi} style={{ 
-                        background: '#fff', border: '1px solid var(--border)', 
-                        borderRadius: '16px', padding: '1.5rem',
-                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)',
-                        transition: 'all .2s ease'
-                    }}>
-                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem' }}>
-                            <div style={{ 
-                                width: 32, height: 32, borderRadius: '50%', background: SELLER_ORANGE_LIGHT,
-                                color: SELLER_ORANGE_DARK, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: '.9rem', fontWeight: 800, flexShrink: 0, marginTop: '.2rem'
-                            }}>
-                                {idx + 1}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                {questions.map((q, idx) => {
+                    const isOpen = expandedQ === q.id_cau_hoi;
+                    const correctCount = (q.lua_chon || []).filter(c => c.la_dap_an_dung).length;
+                    return (
+                        <div
+                            key={q.id_cau_hoi}
+                            id={`q-${q.id_cau_hoi}`}
+                            style={{ border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden', background: '#fff' }}
+                        >
+                            {/* Collapsed header */}
+                            <div
+                                onClick={() => setExpandedQ(isOpen ? null : q.id_cau_hoi)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '.5rem', padding: '.4rem .6rem', cursor: 'pointer', background: isOpen ? SELLER_ORANGE_LIGHT : '#fafafa', transition: 'background .15s' }}
+                            >
+                                <span style={{ fontSize: '.7rem', color: 'var(--text-muted)', width: 14 }}>{isOpen ? '▼' : '▶'}</span>
+                                <span style={{ fontSize: '.75rem', fontWeight: 600, color: SELLER_ORANGE_DARK, flexShrink: 0 }}>C{idx + 1}</span>
+                                <span style={{ flex: 1, fontSize: '.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-primary)' }}>{q.noi_dung}</span>
+                                <span style={{ fontSize: '.65rem', color: 'var(--text-muted)', flexShrink: 0 }}>{(q.lua_chon || []).length} đáp án{correctCount > 0 ? ' ✓' : ''}</span>
+                                <span style={{ fontSize: '.65rem', color: 'var(--text-muted)', flexShrink: 0 }}>{q.diem}đ</span>
+                                <button onClick={e => { e.stopPropagation(); duplicateQuestion(q.id_cau_hoi); }} title="Nhân bản" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', fontSize: 0 }}><MI name="content_copy" style={{ fontSize: '.85rem' }} /></button>
+                                <button onClick={e => { e.stopPropagation(); deleteQuestion(q.id_cau_hoi); }} title="Xóa" style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '2px', fontSize: 0 }}><MI name="close" style={{ fontSize: '.85rem' }} /></button>
                             </div>
-                            <div style={{flex: 1}}>
-                                <label style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '.5rem', display: 'block' }}>Nội dung câu hỏi</label>
-                                <textarea 
-                                    className="form-input" 
-                                    rows={3} 
-                                    value={q.noi_dung} 
-                                    onChange={e => updateQuestion(q.id_cau_hoi, { noi_dung: e.target.value })}
-                                    style={{ fontSize: '1rem', padding: '.8rem', marginBottom: '1rem', borderRadius: '12px', border: '1px solid var(--border)', width: '100%' }}
-                                    placeholder="VD: React Hook nào được dùng để quản lý state?"
-                                />
-                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem'}}>
-                                    <div style={{fontSize: '.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '.5rem', background: 'var(--bg-app)', padding: '.4rem .8rem', borderRadius: '8px'}}>
-                                        <MI name="stars" style={{ color: '#f59e0b', fontSize: '1.1rem' }} />
-                                        Điểm: 
-                                        <input 
-                                            type="number" 
-                                            value={q.diem} 
-                                            onChange={e => updateQuestion(q.id_cau_hoi, {diem: parseInt(e.target.value)||0})} 
-                                            style={{width: 50, border: '1px solid var(--border)', borderRadius: '6px', textAlign: 'center', fontSize: '.9rem', fontWeight: 700, padding: '.2rem'}} 
+                            {/* Expanded body */}
+                            {isOpen && (
+                                <div style={{ padding: '.5rem .6rem', borderTop: '1px solid var(--border)' }}>
+                                    <div style={{ display: 'flex', gap: '.5rem', marginBottom: '.5rem', alignItems: 'center' }}>
+                                        <input
+                                            className="form-input" value={q.noi_dung}
+                                            onChange={e => updateQuestion(q.id_cau_hoi, { noi_dung: e.target.value })}
+                                            style={{ flex: 1, fontSize: '.8rem', padding: '.35rem .5rem' }}
+                                            placeholder="Nội dung câu hỏi..."
                                         />
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '.2rem', fontSize: '.75rem', color: 'var(--text-muted)', flexShrink: 0 }}>
+                                            <MI name="stars" style={{ color: '#f59e0b', fontSize: '.85rem' }} />
+                                            <input type="number" value={q.diem} onChange={e => updateQuestion(q.id_cau_hoi, { diem: parseInt(e.target.value) || 0 })} style={{ width: 32, border: '1px solid var(--border)', borderRadius: '4px', textAlign: 'center', fontSize: '.75rem', padding: '.15rem' }} />
+                                        </div>
                                     </div>
-                                    <button 
-                                        onClick={() => duplicateQuestion(q.id_cau_hoi)} 
-                                        style={{ background: 'var(--bg-app)', border: '1px solid var(--border)', color: 'var(--text-secondary)', padding: '.4rem .8rem', borderRadius: '8px', fontSize: '.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '.3rem', transition: 'all .2s' }}
-                                    >
-                                        <MI name="content_copy" style={{fontSize: '1rem'}} /> Nhân bản
-                                    </button>
-                                    <button 
-                                        onClick={() => deleteQuestion(q.id_cau_hoi)} 
-                                        style={{ background: '#fef2f2', border: '1px solid #fee2e2', color: '#dc2626', padding: '.4rem .8rem', borderRadius: '8px', fontSize: '.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '.3rem', transition: 'all .2s' }}
-                                        onMouseEnter={e => e.currentTarget.style.background = '#fee2e2'}
-                                        onMouseLeave={e => e.currentTarget.style.background = '#fef2f2'}
-                                    >
-                                        <MI name="delete_outline" style={{fontSize: '1rem'}} /> Xóa câu hỏi
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                        {(q.lua_chon || []).map(c => (
+                                            <div key={c.id_lua_chon} style={{ display: 'flex', alignItems: 'center', gap: '.4rem', padding: '.25rem .4rem', borderRadius: '4px', background: c.la_dap_an_dung ? '#f0fdf4' : '#f8fafc', border: `1px solid ${c.la_dap_an_dung ? '#86efac' : '#e2e8f0'}` }}>
+                                                <div onClick={() => setCorrectChoice(q.id_cau_hoi, c.id_lua_chon)} style={{ cursor: 'pointer', color: c.la_dap_an_dung ? '#10b981' : '#cbd5e1', display: 'flex', flexShrink: 0 }} title={c.la_dap_an_dung ? 'Đáp án đúng' : 'Chọn đúng'}>
+                                                    <MI name={c.la_dap_an_dung ? 'check_circle' : 'radio_button_unchecked'} style={{ fontSize: '1.1rem' }} />
+                                                </div>
+                                                <input value={c.noi_dung} onChange={e => updateChoiceContent(q.id_cau_hoi, c.id_lua_chon, e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addChoice(q.id_cau_hoi); } }} autoFocus={c.noi_dung === 'Lựa chọn mới'} style={{ flex: 1, fontSize: '.8rem', padding: '.15rem', border: 'none', background: 'transparent', outline: 'none', fontWeight: c.la_dap_an_dung ? 600 : 400 }} placeholder="Phương án..." />
+                                                <button onClick={() => deleteChoice(q.id_cau_hoi, c.id_lua_chon)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '1px', fontSize: 0 }}><MI name="close" style={{ fontSize: '.9rem' }} /></button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <button onClick={() => addChoice(q.id_cau_hoi)} style={{ background: 'none', border: 'none', color: SELLER_ORANGE, fontSize: '.72rem', fontWeight: 600, cursor: 'pointer', marginTop: '.3rem', display: 'flex', alignItems: 'center', gap: '.2rem', padding: '.2rem .3rem' }}>
+                                        <MI name="add" style={{ fontSize: '.9rem' }} /> Thêm phương án
                                     </button>
                                 </div>
-                            </div>
+                            )}
                         </div>
-
-                        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.25rem' }}>
-                            <label style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '.75rem', display: 'block' }}>Các phương án trả lời</label>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '.6rem' }}>
-                                {(q.lua_chon || []).map((c, cidx) => (
-                                    <div 
-                                        key={c.id_lua_chon} 
-                                        style={{ 
-                                            display: 'flex', alignItems: 'center', gap: '.75rem', 
-                                            padding: '.75rem 1rem', borderRadius: '12px',
-                                            background: c.la_dap_an_dung ? '#f0fdf4' : '#fff',
-                                            border: `1px solid ${c.la_dap_an_dung ? '#10b981' : 'var(--border)'}`,
-                                            boxShadow: c.la_dap_an_dung ? '0 2px 8px rgba(16, 185, 129, 0.1)' : 'none',
-                                            transition: 'all .2s'
-                                        }}
-                                    >
-                                        <div 
-                                            onClick={() => setCorrectChoice(q.id_cau_hoi, c.id_lua_chon)}
-                                            style={{ 
-                                                cursor: 'pointer', 
-                                                color: c.la_dap_an_dung ? '#10b981' : '#cbd5e1',
-                                                display: 'flex', alignItems: 'center', gap: '.5rem',
-                                                flexShrink: 0,
-                                                userSelect: 'none'
-                                            }}
-                                        >
-                                            <MI name={c.la_dap_an_dung ? 'check_circle' : 'radio_button_unchecked'} style={{ fontSize: '1.4rem' }} />
-                                            {c.la_dap_an_dung && <span style={{ fontSize: '.65rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', background: '#d1fae5', padding: '.2rem .5rem', borderRadius: '4px' }}>Đúng</span>}
-                                        </div>
-                                        <input 
-                                            className="form-input"
-                                            value={c.noi_dung}
-                                            onChange={e => updateChoiceContent(q.id_cau_hoi, c.id_lua_chon, e.target.value)}
-                                            onKeyDown={e => {
-                                                if (e.key === 'Enter') {
-                                                    e.preventDefault();
-                                                    addChoice(q.id_cau_hoi);
-                                                }
-                                            }}
-                                            autoFocus={c.noi_dung === 'Lựa chọn mới'}
-                                            style={{ 
-                                                fontSize: '.95rem', padding: '.3rem', flex: 1, 
-                                                border: 'none', background: 'transparent', outline: 'none',
-                                                fontWeight: c.la_dap_an_dung ? 600 : 400
-                                            }}
-                                            placeholder="Nhập phương án..."
-                                        />
-                                        <button 
-                                            onClick={() => deleteChoice(q.id_cau_hoi, c.id_lua_chon)} 
-                                            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '.4rem', borderRadius: '50%' }}
-                                            onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
-                                            onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                                        >
-                                            <MI name="close" style={{ fontSize: '1.1rem' }} />
-                                        </button>
-                                    </div>
-                                ))}
-                                <button 
-                                    onClick={() => addChoice(q.id_cau_hoi)} 
-                                    style={{ 
-                                        alignSelf: 'flex-start', background: 'none', border: `1px dashed ${SELLER_ORANGE}`, 
-                                        color: SELLER_ORANGE, fontSize: '.8rem', fontWeight: 700, cursor: 'pointer', 
-                                        marginTop: '.5rem', display: 'flex', alignItems: 'center', gap: '.4rem',
-                                        padding: '.6rem 1.25rem', borderRadius: '10px', transition: 'all .2s'
-                                    }}
-                                    onMouseEnter={e => e.currentTarget.style.background = SELLER_ORANGE_LIGHT}
-                                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                                >
-                                    <MI name="add_circle_outline" style={{ fontSize: '1.1rem' }} /> Thêm phương án
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-                {questions.length === 0 && <div style={{textAlign: 'center', color: 'var(--text-muted)', fontSize: '.75rem', padding: '1rem', background: '#fff', borderRadius: '8px', border: '1px dashed var(--border)'}}>Chưa có câu hỏi nào.</div>}
+                    );
+                })}
+                {questions.length === 0 && <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '.75rem', padding: '.75rem', background: '#fafafa', borderRadius: '6px', border: '1px dashed var(--border)' }}>Chưa có câu hỏi nào.</div>}
             </div>
         </div>
     );
@@ -453,11 +423,11 @@ const LessonEditor = ({ lesson, onSave, onClose, isExpanded, setIsExpanded }) =>
 
     const hasChanges = React.useMemo(() => {
         if (!lesson) return false;
-        
+
         // Tạo bản sao sạch để so sánh
         const cleanForm = { ...form };
         const cleanLesson = { ...lesson };
-        
+
         // Loại bỏ các trường không cần thiết hoặc gây nhiễu
         const ignoreFields = ['ngay_tao', 'ngay_cap_nhat'];
         ignoreFields.forEach(f => {
@@ -481,174 +451,107 @@ const LessonEditor = ({ lesson, onSave, onClose, isExpanded, setIsExpanded }) =>
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            {/* Editor Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', paddingBottom: '.75rem', borderBottom: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
-                    <button 
-                        onClick={() => setIsExpanded(!isExpanded)}
-                        title={isExpanded ? "Thu nhỏ" : "Phóng to toàn màn hình"}
-                        style={{ 
-                            background: 'var(--bg-app)', border: '1px solid var(--border)', 
-                            borderRadius: '6px', width: 32, height: 32, cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: 'var(--text-secondary)', transition: 'all .2s'
-                        }}
-                    >
-                        <MI name={isExpanded ? 'fullscreen_exit' : 'fullscreen'} style={{ fontSize: '1.2rem' }} />
+            {/* Compact Header: type tabs + close + expand */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.75rem', paddingBottom: '.5rem', borderBottom: '1px solid var(--border)' }}>
+                <button onClick={() => setIsExpanded(!isExpanded)} title={isExpanded ? "Thu nhỏ" : "Phóng to"} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '4px', width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}>
+                    <MI name={isExpanded ? 'fullscreen_exit' : 'fullscreen'} style={{ fontSize: '1rem' }} />
+                </button>
+                {[
+                    { val: 'Video', icon: 'play_circle' },
+                    { val: 'Quiz', icon: 'quiz' },
+                    { val: 'TaiLieu', icon: 'description' },
+                    { val: 'VanBan', icon: 'article' },
+                ].map(t => (
+                    <button key={t.val} onClick={() => set('loai_bai', t.val)} style={{
+                        padding: '.2rem .5rem', border: 'none', borderRadius: '4px', cursor: 'pointer',
+                        fontSize: '.72rem', fontWeight: form.loai_bai === t.val ? 700 : 400,
+                        background: form.loai_bai === t.val ? SELLER_ORANGE : 'transparent',
+                        color: form.loai_bai === t.val ? '#fff' : 'var(--text-muted)',
+                        display: 'flex', alignItems: 'center', gap: '.2rem', transition: 'all .15s',
+                    }}>
+                        <MI name={t.icon} style={{ fontSize: '.9rem' }} /> {typeLabel(t.val)}
                     </button>
-                    <div>
-                        <div style={{ fontSize: '.72rem', color: 'var(--text-muted)', marginBottom: '.1rem' }}>Đang chỉnh sửa</div>
-                        <h3 style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '.4rem' }}>
-                            <MI name={typeIcon(form.loai_bai)} style={{ fontSize: '1.2rem', color: SELLER_ORANGE }} /> {typeLabel(form.loai_bai)}
-                        </h3>
-                    </div>
-                </div>
-                <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '1.2rem', padding: '.5rem', borderRadius: '50%' }}>✕</button>
+                ))}
+                <div style={{ flex: 1 }} />
+                <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 0, padding: '2px' }}><MI name="close" style={{ fontSize: '1.1rem' }} /></button>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', paddingRight: '.5rem' }}>
-                {/* Tên bài */}
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label">Tên bài giảng *</label>
-                    <input className="form-input" value={form.ten_bai_giang || ''} onChange={e => set('ten_bai_giang', e.target.value)} placeholder="VD: Bài 1: Giới thiệu React Hooks" />
-                </div>
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '.6rem', paddingRight: '.25rem' }}>
+                {/* Tên bài — inline */}
+                <input className="form-input" value={form.ten_bai_giang || ''} onChange={e => set('ten_bai_giang', e.target.value)} placeholder="Tên bài giảng *" style={{ fontSize: '.85rem', padding: '.4rem .6rem' }} />
 
-                {/* Loại bài */}
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label">Loại nội dung</label>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '.5rem' }}>
-                        {[
-                            { val: 'Video', icon: 'play_circle', label: 'Video' },
-                            { val: 'Quiz', icon: 'quiz', label: 'Quiz' },
-                            { val: 'TaiLieu', icon: 'description', label: 'Tài liệu' },
-                            { val: 'VanBan', icon: 'article', label: 'Văn bản' },
-                        ].map(t => (
-                            <button
-                                key={t.val}
-                                onClick={() => set('loai_bai', t.val)}
-                                style={{
-                                    padding: '.5rem .25rem', border: `2px solid ${form.loai_bai === t.val ? SELLER_ORANGE : 'var(--border)'}`,
-                                    borderRadius: '8px', background: form.loai_bai === t.val ? SELLER_ORANGE_LIGHT : 'transparent',
-                                    cursor: 'pointer', fontSize: '.75rem', fontWeight: form.loai_bai === t.val ? 700 : 400,
-                                    color: form.loai_bai === t.val ? SELLER_ORANGE_DARK : 'var(--text-secondary)',
-                                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.2rem', transition: 'all .15s',
-                                }}
-                            >
-                                <span style={{ fontSize: '1rem', display: 'flex', alignItems: 'center' }}><MI name={t.icon} style={{ fontSize: '1.1rem' }} /></span>
-                                {t.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                {/* URL */}
+                {/* URL hoặc nội dung tuỳ loại */}
                 {(form.loai_bai === 'Video' || form.loai_bai === 'TaiLieu') && (
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label className="form-label">
-                            {form.loai_bai === 'Video' ? 'URL Video (YouTube / Drive / Vimeo)' : 'URL Tài liệu (PDF / Drive)'}
-                        </label>
-                        <input className="form-input" value={form.noi_dung_url || ''} onChange={e => set('noi_dung_url', e.target.value)}
-                            placeholder={form.loai_bai === 'Video' ? 'https://youtube.com/watch?v=...' : 'https://drive.google.com/...'} />
-                    </div>
+                    <input className="form-input" value={form.noi_dung_url || ''} onChange={e => set('noi_dung_url', e.target.value)}
+                        placeholder={form.loai_bai === 'Video' ? 'URL Video (YouTube / Drive)' : 'URL Tài liệu (PDF / Drive)'}
+                        style={{ fontSize: '.8rem', padding: '.35rem .6rem' }} />
+                )}
+                {form.loai_bai === 'VanBan' && (
+                    <textarea className="form-input" rows={4} value={form.noi_dung_url || ''} onChange={e => set('noi_dung_url', e.target.value)}
+                        placeholder="Nhập nội dung văn bản..." style={{ resize: 'vertical', fontFamily: 'inherit', fontSize: '.8rem', padding: '.35rem .6rem' }} />
                 )}
 
-                {/* Nội dung văn bản */}
-                {form.loai_bai === 'VanBan' && (
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label className="form-label">Nội dung văn bản</label>
-                        <textarea className="form-input" rows={6} value={form.noi_dung_url || ''} onChange={e => set('noi_dung_url', e.target.value)}
-                            placeholder="Nhập nội dung bài học tại đây..." style={{ resize: 'vertical', fontFamily: 'inherit' }} />
+                {/* Metadata row: thời lượng + thứ tự + toggles */}
+                <div style={{ display: 'flex', gap: '.5rem', alignItems: 'center', flexWrap: 'wrap', padding: '.4rem .5rem', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '.25rem', fontSize: '.75rem', color: 'var(--text-secondary)' }}>
+                        <MI name="schedule" style={{ fontSize: '.85rem' }} />
+                        <input type="number" value={form.thoi_luong_phut || 0} onChange={e => set('thoi_luong_phut', parseInt(e.target.value) || 0)} min={0} style={{ width: 40, border: '1px solid var(--border)', borderRadius: '4px', textAlign: 'center', fontSize: '.75rem', padding: '.15rem' }} />
+                        <span>phút</span>
                     </div>
-                )}
+                    <div style={{ width: 1, height: 16, background: '#e2e8f0' }} />
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '.25rem', fontSize: '.72rem', cursor: 'pointer', color: form.la_xem_truoc ? '#059669' : 'var(--text-muted)' }}>
+                        <input type="checkbox" checked={!!form.la_xem_truoc} onChange={e => set('la_xem_truoc', e.target.checked)} style={{ width: 13, height: 13, accentColor: '#059669' }} />
+                        <MI name="visibility" style={{ fontSize: '.85rem' }} /> Free
+                    </label>
+                    {form.loai_bai === 'Quiz' && (
+                        <>
+                            <div style={{ width: 1, height: 16, background: '#e2e8f0' }} />
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '.25rem', fontSize: '.72rem', cursor: 'pointer', color: form.is_proctored ? '#dc2626' : 'var(--text-muted)' }}>
+                                <input type="checkbox" checked={!!form.is_proctored} onChange={e => set('is_proctored', e.target.checked)} style={{ width: 13, height: 13, accentColor: '#ef4444' }} />
+                                <MI name="security" style={{ fontSize: '.85rem' }} /> Giám sát
+                            </label>
+                        </>
+                    )}
+                    {form.loai_bai === 'Video' && (
+                        <>
+                            <div style={{ width: 1, height: 16, background: '#e2e8f0' }} />
+                            <div style={{ display: 'flex', gap: '2px', fontSize: '.7rem' }}>
+                                {[33, 66, 100].map(pct => (
+                                    <button key={pct} onClick={() => set('video_watch_percentage', pct)} style={{
+                                        padding: '.15rem .35rem', border: 'none', borderRadius: '3px', cursor: 'pointer',
+                                        background: (form.video_watch_percentage === pct || (!form.video_watch_percentage && pct === 100)) ? SELLER_ORANGE : '#e2e8f0',
+                                        color: (form.video_watch_percentage === pct || (!form.video_watch_percentage && pct === 100)) ? '#fff' : 'var(--text-muted)',
+                                        fontWeight: 600, fontSize: '.68rem',
+                                    }}>{pct}%</button>
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </div>
 
                 {/* Quiz Editor */}
                 {form.loai_bai === 'Quiz' && (
                     <QuizEditor lesson={form} onUpdate={(newQs) => set('cau_hoi', newQs)} />
                 )}
-
-                {/* Thời lượng & Thứ tự */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label className="form-label">Thời lượng (phút)</label>
-                        <input type="number" className="form-input" value={form.thoi_luong_phut || 0} onChange={e => set('thoi_luong_phut', parseInt(e.target.value) || 0)} min={0} />
-                    </div>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label className="form-label">Thứ tự</label>
-                        <input type="number" className="form-input" value={form.thu_tu || 1} onChange={e => set('thu_tu', parseInt(e.target.value) || 1)} min={1} />
-                    </div>
-                </div>
-
-                {/* Xem trước & Điều kiện hoàn thành */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '.75rem' }}>
-                    {form.loai_bai === 'Quiz' && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', padding: '.75rem', background: '#fef2f2', borderRadius: '8px', border: '1px solid #fecaca' }}>
-                            <input type="checkbox" id="proctored-check" checked={!!form.is_proctored} onChange={e => set('is_proctored', e.target.checked)} style={{ width: 16, height: 16, accentColor: '#ef4444', cursor: 'pointer' }} />
-                            <div>
-                                <label htmlFor="proctored-check" style={{ fontSize: '.875rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '.3rem', color: '#991b1b' }}>
-                                    <MI name="security" style={{ fontSize: '1rem' }} /> Kích hoạt giám sát thi (Anti-Cheating)
-                                </label>
-                                <span style={{ fontSize: '.75rem', color: '#b91c1c', opacity: 0.8 }}>Bật tính năng chống chuyển tab, chặn phím tắt và mời học viên ra ngoài nếu vi phạm</span>
-                            </div>
-                        </div>
-                    )}
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', padding: '.75rem', background: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                        <input type="checkbox" id="preview-check" checked={!!form.la_xem_truoc} onChange={e => set('la_xem_truoc', e.target.checked)} style={{ width: 16, height: 16, accentColor: SELLER_ORANGE, cursor: 'pointer' }} />
-                        <div>
-                            <label htmlFor="preview-check" style={{ fontSize: '.875rem', fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '.3rem' }}>
-                                <MI name="visibility" style={{ fontSize: '1rem', color: '#059669' }} /> Cho phép xem trước miễn phí
-                            </label>
-                            <span style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>Học viên có thể xem bài này khi chưa đăng ký</span>
-                        </div>
-                    </div>
-
-                    {form.loai_bai === 'Video' && (
-                        <div style={{ padding: '.75rem', background: 'var(--bg-app)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                            <label className="form-label" style={{ marginBottom: '.5rem', display: 'flex', alignItems: 'center', gap: '.3rem' }}><MI name="flag" style={{ fontSize: '1rem', color: SELLER_ORANGE }} /> Điều kiện hoàn thành Video</label>
-                            <span style={{ fontSize: '.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '.5rem' }}>Phần trăm thời lượng bắt buộc phải xem để đánh dấu hoàn thành</span>
-                            <div style={{ display: 'flex', gap: '.5rem' }}>
-                                {[33, 66, 100].map(pct => (
-                                    <button
-                                        key={pct}
-                                        onClick={() => set('video_watch_percentage', pct)}
-                                        style={{
-                                            flex: 1, padding: '.4rem', border: `1px solid ${form.video_watch_percentage === pct || (!form.video_watch_percentage && pct === 100) ? SELLER_ORANGE : 'var(--border)'}`,
-                                            background: form.video_watch_percentage === pct || (!form.video_watch_percentage && pct === 100) ? SELLER_ORANGE_LIGHT : '#fff', borderRadius: '6px',
-                                            cursor: 'pointer', fontSize: '.82rem', fontWeight: 600, color: form.video_watch_percentage === pct || (!form.video_watch_percentage && pct === 100) ? SELLER_ORANGE_DARK : 'var(--text-secondary)'
-                                        }}
-                                    >
-                                        {pct}%
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
             </div>
 
-            {/* Save Button */}
-            <div style={{ 
-                paddingTop: '1rem', borderTop: '1px solid var(--border)', marginTop: '1rem',
-                position: 'sticky', bottom: 0, background: '#fff', zIndex: 10, paddingBottom: '.5rem'
-            }}>
-                {hasChanges && (
-                    <div style={{ fontSize: '.72rem', color: SELLER_ORANGE, fontWeight: 700, textAlign: 'center', marginBottom: '.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.3rem' }}>
-                        <MI name="error_outline" style={{ fontSize: '.9rem' }} /> Có thay đổi chưa lưu!
-                    </div>
-                )}
+            {/* Save bar — sticky compact */}
+            <div style={{ paddingTop: '.5rem', borderTop: '1px solid var(--border)', marginTop: '.5rem', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                {hasChanges && <span style={{ fontSize: '.68rem', color: SELLER_ORANGE, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '.2rem' }}><MI name="error_outline" style={{ fontSize: '.8rem' }} /> Chưa lưu</span>}
+                <div style={{ flex: 1 }} />
                 <button
                     onClick={save} disabled={saving || !hasChanges}
                     style={{
-                        width: '100%', padding: '.8rem', 
-                        background: (saving || !hasChanges) ? '#e2e8f0' : SELLER_ORANGE, 
+                        padding: '.4rem 1.25rem',
+                        background: (saving || !hasChanges) ? '#e2e8f0' : SELLER_ORANGE,
                         color: (saving || !hasChanges) ? '#94a3b8' : '#fff',
-                        border: 'none', borderRadius: '12px', fontWeight: 700, 
+                        border: 'none', borderRadius: '6px', fontWeight: 600,
                         cursor: (saving || !hasChanges) ? 'not-allowed' : 'pointer',
-                        fontSize: '.95rem', opacity: saving ? .7 : 1, transition: 'all .2s',
-                        boxShadow: (saving || !hasChanges) ? 'none' : '0 4px 12px rgba(251, 146, 60, 0.3)'
+                        fontSize: '.8rem', transition: 'all .2s',
+                        display: 'flex', alignItems: 'center', gap: '.3rem',
                     }}
                 >
-                    {saving ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.4rem' }}><MI name="hourglass_empty" style={{ fontSize: '1.1rem' }} /> Đang lưu...</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.4rem' }}><MI name="save" style={{ fontSize: '1.1rem' }} /> Lưu bài giảng</span>}
+                    <MI name={saving ? 'hourglass_empty' : 'save'} style={{ fontSize: '.95rem' }} /> {saving ? 'Đang lưu...' : 'Lưu'}
                 </button>
             </div>
         </div>
@@ -674,7 +577,7 @@ const SettingsTab = ({ course, onUpdate, showToast }) => {
     const [saving, setSaving] = useState(false);
     const [previewingVideo, setPreviewingVideo] = useState(false);
 
-    const hasChanges = 
+    const hasChanges =
         form.ten_khoa_hoc !== (course.ten_khoa_hoc || '') ||
         form.mo_ta_ngan !== (course.mo_ta_ngan || '') ||
         form.mo_ta_chi_tiet !== (course.mo_ta_chi_tiet || '') ||
@@ -791,13 +694,13 @@ const SettingsTab = ({ course, onUpdate, showToast }) => {
                 <h3 style={{ fontWeight: 700, fontSize: '.95rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
                     <MI name="settings" style={{ fontSize: '1.1rem', color: 'var(--text-muted)' }} /> Quy tắc học tập
                 </h3>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '.75rem', padding: '1rem', background: form.is_sequential ? '#eff6ff' : 'var(--bg-app)', borderRadius: '8px', border: `1px solid ${form.is_sequential ? '#bfdbfe' : 'var(--border)'}`, transition: 'all .2s' }}>
-                    <input type="checkbox" id="seq-check" checked={form.is_sequential} onChange={e => set('is_sequential', e.target.checked)} style={{ width: 18, height: 18, accentColor: '#2563eb', cursor: 'pointer', marginTop: '.15rem' }} />
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '.75rem', padding: '1rem', background: form.is_sequential ? 'var(--primary-light)' : 'var(--bg-app)', borderRadius: '8px', border: `1px solid ${form.is_sequential ? 'var(--primary)' : 'var(--border)'}`, transition: 'all .2s' }}>
+                    <input type="checkbox" id="seq-check" checked={form.is_sequential} onChange={e => set('is_sequential', e.target.checked)} style={{ width: 18, height: 18, accentColor: 'var(--primary)', cursor: 'pointer', marginTop: '.15rem' }} />
                     <div>
                         <label htmlFor="seq-check" style={{ fontSize: '.9rem', fontWeight: 600, color: form.is_sequential ? '#1e40af' : 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '.3rem', marginBottom: '.25rem' }}>
                             <MI name="link" style={{ fontSize: '1rem' }} /> Bật chế độ Học tuần tự
                         </label>
-                        <p style={{ fontSize: '.8rem', color: form.is_sequential ? '#3b82f6' : 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
+                        <p style={{ fontSize: '.8rem', color: form.is_sequential ? 'var(--primary)' : 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
                             Khi bật, học viên bắt buộc phải <strong>hoàn thành bài học trước</strong> thì mới được phép mở khóa bài học tiếp theo. Đây là tính năng hữu ích để đảm bảo học viên không bỏ sót kiến thức.
                         </p>
                     </div>
@@ -905,10 +808,10 @@ const SettingsTab = ({ course, onUpdate, showToast }) => {
             <button
                 onClick={handleSave} disabled={saving || !hasChanges}
                 style={{
-                    padding: '.75rem 2rem', 
-                    background: (saving || !hasChanges) ? '#e2e8f0' : SELLER_ORANGE, 
+                    padding: '.75rem 2rem',
+                    background: (saving || !hasChanges) ? '#e2e8f0' : SELLER_ORANGE,
                     color: (saving || !hasChanges) ? '#94a3b8' : '#fff',
-                    border: 'none', borderRadius: '8px', fontWeight: 600, 
+                    border: 'none', borderRadius: '8px', fontWeight: 600,
                     cursor: (saving || !hasChanges) ? 'not-allowed' : 'pointer',
                     fontSize: '.95rem', opacity: saving ? .7 : 1, transition: 'all .18s',
                 }}
@@ -976,7 +879,7 @@ const StudentsTab = ({ courseId }) => {
                             const name = s.ho_va_ten || s.ten_hoc_vien || `Học viên #${s.id_nguoi_dung}`;
                             const avatar = s.hinh_anh_hoc_vien;
                             const pct = Math.round(s.phan_tram_hoan_thanh || 0);
-                            
+
                             return (
                                 <tr key={s.id_dang_ky} style={{ borderBottom: idx === students.length - 1 ? 'none' : '1px solid #f1f5f9', transition: 'background .2s' }}
                                     onMouseEnter={e => e.currentTarget.style.background = '#fffbeb'}
@@ -984,7 +887,7 @@ const StudentsTab = ({ courseId }) => {
                                 >
                                     <td style={{ padding: '.85rem 1.25rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
-                                            <div style={{ 
+                                            <div style={{
                                                 width: 36, height: 36, borderRadius: '10px', flexShrink: 0,
                                                 background: avatar ? 'transparent' : 'linear-gradient(135deg, #fef3c7, #fde68a)',
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1012,7 +915,7 @@ const StudentsTab = ({ courseId }) => {
                                             display: 'inline-flex', alignItems: 'center', gap: '.3rem', padding: '.2rem .65rem',
                                             borderRadius: '99px', fontSize: '.68rem', fontWeight: 700,
                                             background: s.trang_thai_hoc === 'DaXong' ? '#ecfdf5' : s.trang_thai_hoc === 'Huy' ? '#fef2f2' : '#eff6ff',
-                                            color: s.trang_thai_hoc === 'DaXong' ? '#059669' : s.trang_thai_hoc === 'Huy' ? '#dc2626' : '#2563eb',
+                                            color: s.trang_thai_hoc === 'DaXong' ? '#059669' : s.trang_thai_hoc === 'Huy' ? '#dc2626' : 'var(--primary)',
                                         }}>
                                             <MI name={s.trang_thai_hoc === 'DaXong' ? 'check_circle' : s.trang_thai_hoc === 'Huy' ? 'cancel' : 'auto_stories'} style={{ fontSize: '.9rem' }} />
                                             {s.trang_thai_hoc === 'DaXong' ? 'Hoàn thành' : s.trang_thai_hoc === 'Huy' ? 'Đã hủy' : 'Đang học'}
@@ -1268,6 +1171,31 @@ const CourseBuilder = () => {
         } catch { showToast('Lỗi lưu bài', 'error'); }
     };
 
+    /* ── Reorder Lessons (drag & drop) ── */
+    const reorderLesson = async (chId, draggedId, targetId) => {
+        const ch = chapters.find(c => c.id_chuong === chId);
+        if (!ch) return;
+        const lessons = [...(ch.bai_giang || [])];
+        const dragIdx = lessons.findIndex(l => l.id_bai_giang === draggedId);
+        const targetIdx = lessons.findIndex(l => l.id_bai_giang === targetId);
+        if (dragIdx === -1 || targetIdx === -1) return;
+
+        // Swap positions
+        const [moved] = lessons.splice(dragIdx, 1);
+        lessons.splice(targetIdx, 0, moved);
+
+        // Update local state immediately
+        const updatedLessons = lessons.map((l, i) => ({ ...l, thu_tu: i + 1 }));
+        setChapters(prev => prev.map(c => c.id_chuong === chId ? { ...c, bai_giang: updatedLessons } : c));
+
+        // Persist to API
+        try {
+            await Promise.all(updatedLessons.map(l =>
+                api.patch(`/lms/bai-giang/${l.id_bai_giang}/`, { thu_tu: l.thu_tu })
+            ));
+        } catch { showToast('Lỗi cập nhật thứ tự', 'error'); }
+    };
+
     /* ── Publish ── */
     const handlePublish = async () => {
         setPublishing(true);
@@ -1305,77 +1233,57 @@ const CourseBuilder = () => {
 
     return (
         <div className="fade-up" style={{ height: 'calc(100vh - 3rem)', display: 'flex', flexDirection: 'column' }}>
-            {/* ── TOP BAR ── */}
+            {/* ── COMPACT TOP BAR: back + name + stats + tabs + publish ── */}
             <div style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                marginBottom: '1rem', gap: '1rem', flexWrap: 'wrap',
-                background: '#fff', border: '1px solid var(--border)',
-                borderRadius: '12px', padding: '.75rem 1.25rem',
-                boxShadow: 'var(--shadow-sm)',
+                display: 'flex', alignItems: 'center', gap: '.5rem',
+                marginBottom: '.5rem', background: '#fff', border: '1px solid var(--border)',
+                borderRadius: '8px', padding: '.4rem .75rem', boxShadow: 'var(--shadow-sm)',
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', minWidth: 0 }}>
-                    <button
-                        onClick={() => navigate('/seller/courses')}
-                        style={{ background: 'var(--bg-app)', border: '1px solid var(--border)', borderRadius: '8px', padding: '.4rem .75rem', cursor: 'pointer', fontSize: '.82rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '.3rem', flexShrink: 0 }}
-                    >
-                        ← Quay lại
-                    </button>
-                    <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: '.72rem', color: 'var(--text-muted)' }}>Course Builder</div>
-                        <div style={{ fontWeight: 700, fontSize: '.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 280 }}>
-                            {course?.ten_khoa_hoc}
-                        </div>
-                    </div>
-                    {/* Stats pills */}
-                    <div style={{ display: 'flex', gap: '.4rem', flexShrink: 0 }}>
-                        <span style={{ background: 'var(--bg-app)', border: '1px solid var(--border)', padding: '.2rem .6rem', borderRadius: '99px', fontSize: '.72rem', color: 'var(--text-secondary)' }}>
-                            {chapters.length} chương
-                        </span>
-                        <span style={{ background: 'var(--bg-app)', border: '1px solid var(--border)', padding: '.2rem .6rem', borderRadius: '99px', fontSize: '.72rem', color: 'var(--text-secondary)' }}>
-                            {totalLessons} bài
-                        </span>
-                        {course?.cong_khai
-                            ? <span style={{ background: '#ecfdf5', border: '1px solid #d1fae5', padding: '.2rem .6rem', borderRadius: '99px', fontSize: '.72rem', color: '#059669', fontWeight: 600 }}>● Đang bán</span>
-                            : <span style={{ background: 'var(--bg-app)', border: '1px solid var(--border)', padding: '.2rem .6rem', borderRadius: '99px', fontSize: '.72rem', color: 'var(--text-muted)' }}>○ Bản nháp</span>
-                        }
+                <button onClick={() => navigate('/seller/courses')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px', fontSize: 0, flexShrink: 0 }}>
+                    <MI name="arrow_back" style={{ fontSize: '1.1rem' }} />
+                </button>
+                <div style={{ minWidth: 0, flexShrink: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: '.82rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>
+                        {course?.ten_khoa_hoc}
                     </div>
                 </div>
+                <div style={{ display: 'flex', gap: '.25rem', flexShrink: 0 }}>
+                    <span style={{ background: 'var(--bg-app)', padding: '.1rem .4rem', borderRadius: '99px', fontSize: '.65rem', color: 'var(--text-muted)' }}>{chapters.length} chương</span>
+                    <span style={{ background: 'var(--bg-app)', padding: '.1rem .4rem', borderRadius: '99px', fontSize: '.65rem', color: 'var(--text-muted)' }}>{totalLessons} bài</span>
+                    {course?.cong_khai
+                        ? <span style={{ background: '#ecfdf5', padding: '.1rem .4rem', borderRadius: '99px', fontSize: '.65rem', color: '#059669', fontWeight: 600 }}>● Đang bán</span>
+                        : <span style={{ background: '#fef3c7', padding: '.1rem .4rem', borderRadius: '99px', fontSize: '.65rem', color: '#d97706' }}>○ Nháp</span>
+                    }
+                </div>
+
+                {/* Separator */}
+                <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 .25rem' }} />
+
+                {/* Inline tabs */}
+                {TABS.map(tab => (
+                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+                        padding: '.3rem .6rem', border: 'none', borderRadius: '5px', cursor: 'pointer',
+                        fontWeight: activeTab === tab.id ? 600 : 400,
+                        background: activeTab === tab.id ? SELLER_ORANGE_LIGHT : 'transparent',
+                        color: activeTab === tab.id ? SELLER_ORANGE_DARK : 'var(--text-muted)',
+                        fontSize: '.75rem', transition: 'all .15s', display: 'flex', alignItems: 'center', gap: '.25rem',
+                    }}>
+                        <MI name={tab.icon} style={{ fontSize: '.9rem' }} /> {tab.label}
+                    </button>
+                ))}
+
+                <div style={{ flex: 1 }} />
 
                 {/* Publish button */}
                 {course?.cong_khai ? (
-                    <button
-                        onClick={handleUnpublish}
-                        style={{ padding: '.5rem 1.25rem', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '.875rem', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '.3rem' }}
-                    >
-                        <MI name="visibility_off" style={{ fontSize: '1rem' }} /> Ẩn khóa học
+                    <button onClick={handleUnpublish} style={{ padding: '.25rem .6rem', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '5px', fontWeight: 600, cursor: 'pointer', fontSize: '.72rem', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '.2rem' }}>
+                        <MI name="visibility_off" style={{ fontSize: '.85rem' }} /> Ẩn
                     </button>
                 ) : (
-                    <button
-                        onClick={handlePublish} disabled={publishing}
-                        style={{ padding: '.55rem 1.4rem', background: SELLER_ORANGE, color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '.875rem', opacity: publishing ? .7 : 1, flexShrink: 0, display: 'flex', alignItems: 'center', gap: '.4rem' }}
-                    >
-                        {publishing ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem' }}><MI name="hourglass_empty" style={{ fontSize: '1rem' }} /> Đang đăng...</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem' }}><MI name="publish" style={{ fontSize: '1rem' }} /> Đăng bán</span>}
+                    <button onClick={handlePublish} disabled={publishing} style={{ padding: '.25rem .6rem', background: SELLER_ORANGE, color: '#fff', border: 'none', borderRadius: '5px', fontWeight: 600, cursor: 'pointer', fontSize: '.72rem', opacity: publishing ? .7 : 1, flexShrink: 0, display: 'flex', alignItems: 'center', gap: '.2rem' }}>
+                        <MI name="publish" style={{ fontSize: '.85rem' }} /> {publishing ? 'Đang...' : 'Đăng bán'}
                     </button>
                 )}
-            </div>
-
-            {/* ── TABS ── */}
-            <div style={{ display: 'flex', gap: '.25rem', marginBottom: '1rem', background: '#fff', border: '1px solid var(--border)', borderRadius: '10px', padding: '.35rem', boxShadow: 'var(--shadow-sm)' }}>
-                {TABS.map(tab => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        style={{
-                            flex: 1, padding: '.5rem .75rem', border: 'none', borderRadius: '7px', cursor: 'pointer',
-                            fontWeight: activeTab === tab.id ? 600 : 400,
-                            background: activeTab === tab.id ? SELLER_ORANGE_LIGHT : 'transparent',
-                            color: activeTab === tab.id ? SELLER_ORANGE_DARK : 'var(--text-secondary)',
-                            fontSize: '.82rem', transition: 'all .18s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.4rem',
-                        }}
-                    >
-                        <MI name={tab.icon} style={{ fontSize: '1rem' }} /> {tab.label}
-                    </button>
-                ))}
             </div>
 
             {/* ── CONTENT AREA ── */}
@@ -1383,46 +1291,33 @@ const CourseBuilder = () => {
 
                 {/* TAB: Nội dung khóa học */}
                 {activeTab === 'content' && (
-                    <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: (selectedLesson && isEditorExpanded) ? '0fr 1fr' : (selectedLesson ? '300px 1fr' : '1fr'), 
-                        gap: (selectedLesson && isEditorExpanded) ? '0' : '1rem', 
-                        flex: 1, 
-                        overflow: 'hidden', 
-                        transition: 'all .3s ease-in-out' 
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: (selectedLesson && isEditorExpanded) ? '0fr 1fr' : (selectedLesson ? '240px 1fr' : '1fr'),
+                        gap: (selectedLesson && isEditorExpanded) ? '0' : '.5rem',
+                        flex: 1, overflow: 'hidden', transition: 'all .3s ease-in-out'
                     }}>
                         {/* LEFT: Chapter Tree */}
-                        <div className="card" style={{ 
-                            overflow: 'auto', 
-                            padding: (selectedLesson && isEditorExpanded) ? '0' : '1rem', 
-                            display: 'flex', 
-                            flexDirection: 'column',
+                        <div className="card" style={{
+                            overflow: 'auto',
+                            padding: (selectedLesson && isEditorExpanded) ? '0' : '.6rem',
+                            display: 'flex', flexDirection: 'column',
                             opacity: (selectedLesson && isEditorExpanded) ? 0 : 1,
                             visibility: (selectedLesson && isEditorExpanded) ? 'hidden' : 'visible',
                             width: (selectedLesson && isEditorExpanded) ? 0 : 'auto',
                             transition: 'all .3s ease-in-out',
                             border: (selectedLesson && isEditorExpanded) ? 'none' : '1px solid var(--border)',
                         }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                <h3 style={{ fontWeight: 700, fontSize: '.875rem' }}>🗂 Chương trình học</h3>
-                                <button
-                                    onClick={addChapter}
-                                    style={{ padding: '.35rem .75rem', background: SELLER_ORANGE, color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '.78rem', fontWeight: 600 }}
-                                >
-                                    + Thêm chương
-                                </button>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '.5rem' }}>
+                                <span style={{ fontWeight: 700, fontSize: '.78rem' }}>🗂 Chương trình học</span>
+                                <button onClick={addChapter} style={{ padding: '.2rem .5rem', background: SELLER_ORANGE, color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '.7rem', fontWeight: 600 }}>+ Thêm</button>
                             </div>
 
                             {chapters.length === 0 ? (
-                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>
-                                    <div style={{ fontSize: '3rem' }}>📭</div>
-                                    <div>
-                                        <div style={{ fontWeight: 600, marginBottom: '.3rem' }}>Chưa có chương nào</div>
-                                        <div style={{ fontSize: '.8rem' }}>Bắt đầu xây dựng nội dung khóa học</div>
-                                    </div>
-                                    <button onClick={addChapter} style={{ padding: '.5rem 1rem', background: SELLER_ORANGE, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '.82rem' }}>
-                                        + Thêm chương đầu tiên
-                                    </button>
+                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '.75rem', color: 'var(--text-muted)', textAlign: 'center', padding: '1.5rem' }}>
+                                    <div style={{ fontSize: '2rem' }}>📭</div>
+                                    <div style={{ fontSize: '.78rem' }}>Chưa có chương nào</div>
+                                    <button onClick={addChapter} style={{ padding: '.35rem .75rem', background: SELLER_ORANGE, color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '.75rem' }}>+ Thêm chương đầu tiên</button>
                                 </div>
                             ) : (
                                 <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -1435,6 +1330,7 @@ const CourseBuilder = () => {
                                             onAddLesson={addLesson}
                                             onDeleteChapter={deleteChapter}
                                             onRenameChapter={renameChapter}
+                                            onReorderLesson={reorderLesson}
                                         />
                                     ))}
                                 </div>
@@ -1443,7 +1339,7 @@ const CourseBuilder = () => {
 
                         {/* RIGHT: Lesson Editor */}
                         {selectedLesson ? (
-                            <div className="card" style={{ overflow: 'auto', padding: '1.25rem' }}>
+                            <div className="card" style={{ overflow: 'auto', padding: '.75rem' }}>
                                 <LessonEditor
                                     lesson={selectedLesson}
                                     onSave={saveLesson}
@@ -1453,17 +1349,6 @@ const CourseBuilder = () => {
                                 />
                             </div>
                         ) : null}
-
-                        {/* Placeholder khi chưa chọn bài (chỉ hiện khi không có bài được chọn nhưng đã có chương) */}
-                        {!selectedLesson && chapters.length > 0 && (
-                            <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem', color: 'var(--text-muted)', overflow: 'hidden' }}>
-                                <div style={{ fontSize: '3rem' }}>✏️</div>
-                                <div style={{ textAlign: 'center' }}>
-                                    <div style={{ fontWeight: 600, marginBottom: '.3rem', color: 'var(--text-primary)' }}>Chọn bài giảng để chỉnh sửa</div>
-                                    <div style={{ fontSize: '.82rem' }}>hoặc nhấn ＋ trong tiêu đề chương để thêm bài mới</div>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 )}
 
@@ -1499,3 +1384,4 @@ const CourseBuilder = () => {
 };
 
 export default CourseBuilder;
+

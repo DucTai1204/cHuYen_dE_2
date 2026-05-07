@@ -10,6 +10,7 @@ import VerifyCertificate from './pages/VerifyCertificate';
 
 // Student pages
 import Navbar from './components/Navbar';
+import AuthModal from './components/AuthModal';
 import Dashboard from './pages/Dashboard';
 import ExamProctoring from './pages/ExamProctoring';
 import CourseDetail from './pages/CourseDetail';
@@ -87,6 +88,21 @@ const EmployerLayout = ({ children }) => (
     </div>
 );
 
+/* ─── Redirect /login & /register to landing with modal ─── */
+const AuthRedirect = ({ type }) => {
+    const { openAuthModal, user } = useAuth();
+    React.useEffect(() => {
+        if (!user) openAuthModal(type);
+    }, [type, user, openAuthModal]);
+
+    if (user) {
+        if (user.vai_tro === 'GiangVien') return <Navigate to="/seller/dashboard" replace />;
+        if (user.vai_tro === 'NhaTuyenDung') return <Navigate to="/employer/dashboard" replace />;
+        return <Navigate to="/dashboard" replace />;
+    }
+    return <Landing />;
+};
+
 /* ── Auto-redirect sau đăng nhập theo vai trò ── */
 const HomeRedirect = () => {
     const { user, loading } = useAuth();
@@ -117,8 +133,8 @@ function App() {
                     <Route path="/" element={<HomeRedirect />} />
 
                     {/* Public */}
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
+                    <Route path="/login" element={<AuthRedirect type="login" />} />
+                    <Route path="/register" element={<AuthRedirect type="register" />} />
                     <Route path="/verify/:uuid" element={<VerifyCertificate />} />
 
                     {/* Student routes */}
@@ -204,6 +220,7 @@ function App() {
                     {/* 404 fallback */}
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
+                <AuthModal />
             </Router>
         </ChatProvider>
     </AuthProvider>

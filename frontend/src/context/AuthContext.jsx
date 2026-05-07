@@ -6,6 +6,7 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [authModal, setAuthModal] = useState({ isOpen: false, type: 'login' }); // 'login' | 'register'
 
     // Parse JWT token cơ bản để lấy roles (trong thực tế có thể gọi /api/auth/me)
     const parseJwt = (token) => {
@@ -58,8 +59,14 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
     };
 
+    const openAuthModal = (type = 'login') => setAuthModal({ isOpen: true, type });
+    const closeAuthModal = () => setAuthModal({ isOpen: false, type: 'login' });
+
     return (
-        <AuthContext.Provider value={{ user, setUser, login, logout, loading, refreshUser }}>
+        <AuthContext.Provider value={{
+            user, setUser, login, logout, loading, refreshUser,
+            authModal, openAuthModal, closeAuthModal
+        }}>
             {!loading && children}
         </AuthContext.Provider>
     );

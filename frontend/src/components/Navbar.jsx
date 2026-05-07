@@ -28,7 +28,7 @@ const getInitials = (name) => {
 };
 
 const Navbar = () => {
-    const { user, logout } = useAuth();
+    const { user, logout, openAuthModal } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -59,7 +59,8 @@ const Navbar = () => {
 
     const handleLogout = () => {
         logout();
-        navigate('/login');
+        navigate('/');
+        openAuthModal('login');
     };
 
     return (

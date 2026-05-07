@@ -43,7 +43,7 @@ const EnrolledCard = ({ enrollment }) => {
                 onMouseEnter={e => { e.currentTarget.style.boxShadow = 'var(--shadow-md)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
                 onMouseLeave={e => { e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; e.currentTarget.style.transform = 'translateY(0)'; }}
             >
-                <div style={{ width: '100%', position: 'relative', paddingBottom: '56.25%', background: 'linear-gradient(135deg, #eff6ff, #dbeafe)', overflow: 'hidden' }}>
+                <div style={{ width: '100%', position: 'relative', paddingBottom: '56.25%', background: 'linear-gradient(135deg, var(--primary-light), var(--bg-white))', overflow: 'hidden' }}>
                     <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
                         {course.hinh_anh_thumbnail
                             ? <img 
@@ -53,7 +53,7 @@ const EnrolledCard = ({ enrollment }) => {
                                 onError={e => e.target.style.display = 'none'} 
                             />
                             : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <MI name="menu_book" style={{ fontSize: '2.5rem', color: '#93c5fd' }} />
+                                <MI name="menu_book" style={{ fontSize: '2.5rem', color: 'var(--primary)' }} />
                               </div>
                         }
                     </div>

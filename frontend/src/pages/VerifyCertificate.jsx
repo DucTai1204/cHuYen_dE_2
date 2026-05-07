@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 const MI = ({ name, style }) => <span className="material-icons" style={{ fontSize: '1.2rem', ...style }}>{name}</span>;
 
@@ -11,6 +13,86 @@ const VerifyCertificate = () => {
     const [error, setError] = useState('');
 
     const [showTechInfo, setShowTechInfo] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
+    const [searchParams] = useSearchParams();
+    const shouldDownload = searchParams.get('download') === 'true';
+
+    const downloadCertificate = async () => {
+        if (isDownloading || !certData) return;
+        setIsDownloading(true);
+        
+        try {
+            const element = document.getElementById('certificate-print-area');
+            if (!element) return;
+
+            // Đặt kích thước cố định cho element trước khi chụp
+            // để đảm bảo render đúng dù nằm trong iframe nhỏ
+            const origStyle = element.style.cssText;
+            element.style.width = '1000px';
+            element.style.height = `${Math.round(1000 / 1.414)}px`; // Giữ tỷ lệ A4 landscape
+            element.style.maxWidth = 'none';
+            element.style.aspectRatio = 'unset';
+
+            // Đợi layout cập nhật
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // Chụp canvas với scale cao để nét
+            const canvas = await html2canvas(element, {
+                scale: 3,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+                allowTaint: true,
+                width: 1000,
+                height: Math.round(1000 / 1.414),
+            });
+
+            // Khôi phục style gốc
+            element.style.cssText = origStyle;
+
+            const imgData = canvas.toDataURL('image/png');
+
+            // Tạo PDF khổ A4 nằm ngang
+            const pdf = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            const pdfWidth = pdf.internal.pageSize.getWidth();   // 297mm
+            const pdfHeight = pdf.internal.pageSize.getHeight(); // 210mm
+
+            // Tính toán kích thước ảnh giữ đúng tỷ lệ (fit contain)
+            const canvasRatio = canvas.width / canvas.height;
+            const pageRatio = pdfWidth / pdfHeight;
+
+            let imgW, imgH, offsetX, offsetY;
+            if (canvasRatio >= pageRatio) {
+                // Ảnh rộng hơn trang → fit theo chiều rộng
+                imgW = pdfWidth;
+                imgH = pdfWidth / canvasRatio;
+                offsetX = 0;
+                offsetY = (pdfHeight - imgH) / 2;
+            } else {
+                // Ảnh cao hơn trang → fit theo chiều cao
+                imgH = pdfHeight;
+                imgW = pdfHeight * canvasRatio;
+                offsetX = (pdfWidth - imgW) / 2;
+                offsetY = 0;
+            }
+
+            // Thêm ảnh vào PDF, căn giữa và giữ đúng tỷ lệ
+            pdf.addImage(imgData, 'PNG', offsetX, offsetY, imgW, imgH, undefined, 'FAST');
+            
+            const fileName = `Chứng chỉ ${certData.ten_khoa_hoc}.pdf`;
+            pdf.save(fileName);
+        } catch (err) {
+            console.error('Download error:', err);
+            window.print();
+        } finally {
+            setIsDownloading(false);
+        }
+    };
 
     useEffect(() => {
         api.get(`/certificates/verify/${uuid}/`)
@@ -18,6 +100,15 @@ const VerifyCertificate = () => {
             .catch(() => setError('Mã UUID không tồn tại hoặc đã bị thu hồi.'))
             .finally(() => setLoading(false));
     }, [uuid]);
+
+    useEffect(() => {
+        if (!loading && !error && certData && shouldDownload) {
+            const timer = setTimeout(() => {
+                downloadCertificate();
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [loading, error, certData, shouldDownload]);
 
     if (loading) return (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', flexDirection: 'column', gap: '1rem' }}>
@@ -44,15 +135,29 @@ const VerifyCertificate = () => {
                             <MI name="info" style={{ fontSize: '1.1rem', color: '#64748b' }} /> {showTechInfo ? 'Ẩn chi tiết' : 'Thông số xác thực'}
                         </button>
                         <button 
-                            onClick={() => {
-                                const originalTitle = document.title;
-                                document.title = `Chứng chỉ ${certData.ten_khoa_hoc} - ${certData.ho_va_ten_hoc_vien}`;
-                                window.print();
-                                document.title = originalTitle;
+                            onClick={downloadCertificate}
+                            disabled={isDownloading}
+                            style={{ 
+                                background: '#1e293b', 
+                                color: '#fff', 
+                                border: 'none', 
+                                padding: '.5rem 1.25rem', 
+                                borderRadius: '8px', 
+                                cursor: isDownloading ? 'not-allowed' : 'pointer', 
+                                fontSize: '.85rem', 
+                                fontWeight: 600, 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '6px',
+                                opacity: isDownloading ? 0.7 : 1
                             }}
-                            style={{ background: '#1e293b', color: '#fff', border: 'none', padding: '.5rem 1.25rem', borderRadius: '8px', cursor: 'pointer', fontSize: '.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
                         >
-                            <MI name="download" style={{ fontSize: '1.1rem' }} /> Tải PDF
+                            {isDownloading ? (
+                                <div style={{ width: 14, height: 14, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+                            ) : (
+                                <MI name="download" style={{ fontSize: '1.1rem' }} />
+                            )}
+                            {isDownloading ? 'Đang xử lý...' : 'Tải PDF'}
                         </button>
                     </div>
                 </div>
@@ -86,10 +191,10 @@ const VerifyCertificate = () => {
                             <div style={{ position: 'absolute', inset: '25px', border: '1px solid #f1f5f9', pointerEvents: 'none' }} />
                             
                             {/* Decorative Corners */}
-                            <div style={{ position: 'absolute', top: 20, left: 20, width: 60, height: 60, borderTop: '4px solid #3b82f6', borderLeft: '4px solid #3b82f6' }} />
-                            <div style={{ position: 'absolute', top: 20, right: 20, width: 60, height: 60, borderTop: '4px solid #3b82f6', borderRight: '4px solid #3b82f6' }} />
-                            <div style={{ position: 'absolute', bottom: 20, left: 20, width: 60, height: 60, borderBottom: '4px solid #3b82f6', borderLeft: '4px solid #3b82f6' }} />
-                            <div style={{ position: 'absolute', bottom: 20, right: 20, width: 60, height: 60, borderBottom: '4px solid #3b82f6', borderRight: '4px solid #3b82f6' }} />
+                            <div style={{ position: 'absolute', top: 20, left: 20, width: 60, height: 60, borderTop: '4px solid var(--primary)', borderLeft: '4px solid var(--primary)' }} />
+                            <div style={{ position: 'absolute', top: 20, right: 20, width: 60, height: 60, borderTop: '4px solid var(--primary)', borderRight: '4px solid var(--primary)' }} />
+                            <div style={{ position: 'absolute', bottom: 20, left: 20, width: 60, height: 60, borderBottom: '4px solid var(--primary)', borderLeft: '4px solid var(--primary)' }} />
+                            <div style={{ position: 'absolute', bottom: 20, right: 20, width: 60, height: 60, borderBottom: '4px solid var(--primary)', borderRight: '4px solid var(--primary)' }} />
 
                             {/* Background Watermark */}
                             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', opacity: 0.03, zIndex: 0, pointerEvents: 'none' }}>
@@ -99,11 +204,11 @@ const VerifyCertificate = () => {
                             {/* Header Section */}
                             <div style={{ textAlign: 'center', zIndex: 1, marginTop: '20px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-                                    <div style={{ background: '#3b82f6', width: 50, height: 50, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                                    <div style={{ background: 'var(--primary)', width: 50, height: 50, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
                                         <MI name="verified" style={{ fontSize: '1.8rem' }} />
                                     </div>
                                 </div>
-                                <h4 style={{ margin: 0, letterSpacing: '0.3em', color: '#3b82f6', fontWeight: 800, fontSize: '0.8rem', textTransform: 'uppercase' }}>Chứng Chỉ Hoàn Thành</h4>
+                                <h4 style={{ margin: 0, letterSpacing: '0.3em', color: 'var(--primary)', fontWeight: 800, fontSize: '0.8rem', textTransform: 'uppercase' }}>Chứng Chỉ Hoàn Thành</h4>
                                 <h1 style={{ margin: '10px 0', fontSize: '3.5rem', fontWeight: 900, fontFamily: "'Times New Roman', serif", color: '#1e293b' }}>CERTIFICATE</h1>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px' }}>
                                     <div style={{ height: '1px', background: '#e2e8f0', width: '80px' }} />
@@ -114,11 +219,11 @@ const VerifyCertificate = () => {
 
                             {/* Body Section */}
                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center', zIndex: 1, padding: '0 60px' }}>
-                                <p style={{ fontSize: '1.1rem', color: '#64748b', marginBottom: '5px', fontStyle: 'italic' }}>Chứng nhận rằng</p>
-                                <h2 style={{ fontSize: '2.8rem', fontWeight: 800, color: '#1e3a8a', margin: '5px 0', fontFamily: "'EB Garamond', serif" }}>{certData.ho_va_ten_hoc_vien}</h2>
-                                <div style={{ width: '100%', height: '1px', background: 'linear-gradient(to right, transparent, #3b82f6, transparent)', margin: '15px auto' }} />
-                                <p style={{ fontSize: '1rem', color: '#64748b', marginBottom: '10px' }}>Đã hoàn thành xuất sắc khóa học chuyên môn</p>
-                                <h3 style={{ fontSize: '1.8rem', fontWeight: 700, color: '#2563eb', margin: '5px 0' }}>{certData.ten_khoa_hoc}</h3>
+                                <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', marginBottom: '5px', fontStyle: 'italic' }}>Chứng nhận rằng</p>
+                                <h2 style={{ fontSize: '2.8rem', fontWeight: 800, color: 'var(--secondary)', margin: '5px 0', fontFamily: "'EB Garamond', serif" }}>{certData.ho_va_ten_hoc_vien}</h2>
+                                <div style={{ width: '100%', height: '1px', background: 'linear-gradient(to right, transparent, var(--primary), transparent)', margin: '15px auto' }} />
+                                <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '10px' }}>Đã hoàn thành xuất sắc khóa học chuyên môn</p>
+                                <h3 style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--primary-dark)', margin: '5px 0' }}>{certData.ten_khoa_hoc}</h3>
                             </div>
 
                             {/* Footer Section */}
@@ -136,7 +241,7 @@ const VerifyCertificate = () => {
 
                                 <div style={{ textAlign: 'center', position: 'relative' }}>
                                     {/* Mock Seal */}
-                                    <div style={{ width: 100, height: 100, border: '4px double #3b82f6', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3b82f6', position: 'absolute', top: -110, left: '50%', transform: 'translateX(-50%) rotate(-15deg)', opacity: 0.8 }}>
+                                    <div style={{ width: 100, height: 100, border: '4px double var(--primary)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', position: 'absolute', top: -110, left: '50%', transform: 'translateX(-50%) rotate(-15deg)', opacity: 0.8 }}>
                                         <div style={{ textAlign: 'center', fontWeight: 900, fontSize: '0.6rem' }}>
                                             EDUKHT<br/>VERIFIED<br/>{new Date().getFullYear()}
                                         </div>
@@ -154,10 +259,10 @@ const VerifyCertificate = () => {
 
                         {/* Technical Information - Toggleable Panel */}
                         {showTechInfo && (
-                            <div className="fade-up no-print" style={{ marginTop: '1.5rem', background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)' }}>
-                                <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #f1f5f9', background: '#f8fafc', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                                    <MI name="settings_ethernet" style={{ color: '#3b82f6' }} />
-                                    <span style={{ fontWeight: 700, fontSize: '.85rem', color: '#475569', textTransform: 'uppercase' }}>Thông số kỹ thuật xác thực</span>
+                            <div className="fade-up no-print" style={{ marginTop: '1.5rem', background: '#fff', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)' }}>
+                                <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border)', background: 'var(--primary-light)', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                                    <MI name="settings_ethernet" style={{ color: 'var(--primary)' }} />
+                                    <span style={{ fontWeight: 700, fontSize: '.85rem', color: 'var(--secondary)', textTransform: 'uppercase' }}>Thông số kỹ thuật xác thực</span>
                                 </div>
                                 <div style={{ padding: '1rem 1.25rem' }}>
                                     {[

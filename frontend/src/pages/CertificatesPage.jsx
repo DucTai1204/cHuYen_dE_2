@@ -5,11 +5,14 @@ import api from '../services/api';
 
 const MI = ({ name, style }) => <span className="material-icons" style={{ fontSize: '1.2rem', ...style }}>{name}</span>;
 
+const TRINH_DO = { CoSo: 'Cơ sở', TrungCap: 'Trung cấp', NangCao: 'Nâng cao' };
+
 const CertificatesPage = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [certificates, setCertificates] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [downloadUrl, setDownloadUrl] = useState(null);
 
     useEffect(() => {
         // Fetch enrollments that are completed
@@ -59,7 +62,7 @@ const CertificatesPage = () => {
                     </p>
                     <Link to="/dashboard">
                         <button style={{ 
-                            padding: '.75rem 1.5rem', background: '#2563eb', color: '#fff', 
+                            padding: '.75rem 1.5rem', background: 'var(--primary)', color: '#fff', 
                             border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer',
                             display: 'flex', alignItems: 'center', gap: '.5rem'
                         }}>
@@ -95,7 +98,7 @@ const CertificatesPage = () => {
                                 </div>
 
                                 <div style={{ padding: '1.25rem' }}>
-                                    <div style={{ fontSize: '.7rem', color: '#3b82f6', fontWeight: 800, letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: '.5rem' }}>
+                                    <div style={{ fontSize: '.7rem', color: 'var(--secondary)', fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: '.5rem', opacity: 0.9 }}>
                                         Hệ thống EduHKT
                                     </div>
                                     <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#1e293b', marginBottom: '1rem', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: '2.8rem' }}>
@@ -114,12 +117,12 @@ const CertificatesPage = () => {
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.8rem' }}>
                                             <span style={{ color: '#64748b' }}>Trình độ:</span>
-                                            <span style={{ color: '#1e293b', fontWeight: 600 }}>{course?.trinh_do || 'Hoàn thành'}</span>
+                                            <span style={{ color: '#1e293b', fontWeight: 600 }}>{TRINH_DO[course?.trinh_do] || course?.trinh_do || 'Hoàn thành'}</span>
                                         </div>
                                         {cert && (
                                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.8rem' }}>
                                                 <span style={{ color: '#64748b' }}>Mã định danh:</span>
-                                                <span style={{ color: '#3b82f6', fontWeight: 700, fontFamily: 'monospace' }}>
+                                                <span style={{ color: 'var(--primary-dark)', fontWeight: 700, fontFamily: 'monospace', letterSpacing: '0.02em' }}>
                                                     {cert.ma_uuid_chung_chi.slice(0, 8)}...
                                                 </span>
                                             </div>
@@ -147,7 +150,7 @@ const CertificatesPage = () => {
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center'
                                             }}
                                             onClick={() => {
-                                                if (cert) navigate(`/verify/${cert.ma_uuid_chung_chi}`);
+                                                if (cert) setDownloadUrl(`/verify/${cert.ma_uuid_chung_chi}?download=true`);
                                             }}
                                         >
                                             <MI name="download" style={{ fontSize: '1.2rem' }} />
@@ -158,6 +161,16 @@ const CertificatesPage = () => {
                         );
                     })}
                 </div>
+            )}
+            {downloadUrl && (
+                <iframe 
+                    src={downloadUrl} 
+                    style={{ position: 'fixed', left: '-9999px', top: '-9999px', width: '1200px', height: '850px', border: 'none', opacity: 0, pointerEvents: 'none' }} 
+                    onLoad={() => {
+                        setTimeout(() => setDownloadUrl(null), 15000);
+                    }}
+                    title="downloader"
+                />
             )}
         </div>
     );

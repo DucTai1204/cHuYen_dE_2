@@ -96,7 +96,7 @@ const StudentCareer = () => {
                 </div>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                    <div className="stagger-item" style={{ background: 'linear-gradient(135deg, #1e3a8a, #3b82f6)', padding: '1.75rem', borderRadius: '15px', color: '#fff', boxShadow: '0 10px 25px rgba(30,58,138,.2)' }}>
+                    <div className="stagger-item" style={{ background: 'linear-gradient(135deg, var(--secondary), var(--primary))', padding: '1.75rem', borderRadius: '15px', color: '#fff', boxShadow: '0 10px 25px rgba(139, 107, 79, .2)' }}>
                         <h2 style={{ fontSize: '1.25rem', marginBottom: '.5rem', display: 'flex', alignItems: 'center', gap: '.6rem', fontWeight: 800 }}>
                             <MI name="celebration" style={{ fontSize: '1.8rem' }} /> Xin chúc mừng!
                         </h2>
@@ -111,13 +111,13 @@ const StudentCareer = () => {
                             alignItems: 'center', boxShadow: 'var(--shadow-sm)', transition: 'transform .2s'
                         }}>
                             <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-                                <div style={{ width: 56, height: 56, background: '#eff6ff', color: '#1e3a8a', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <div style={{ width: 56, height: 56, background: 'var(--primary-light)', color: 'var(--secondary)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <MI name="business" style={{ fontSize: '2rem' }} />
                                 </div>
                                 <div>
                                     <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '.25rem' }}>{h.ho_va_ten_ntd || h.ten_nha_tuyen_dung}</div>
                                     <div style={{ fontSize: '.875rem', color: 'var(--text-secondary)' }}>
-                                        Dành cho học viên khóa: <strong style={{ color: '#2563eb' }}>{h.ten_khoa_hoc}</strong>
+                                        Dành cho học viên khóa: <strong style={{ color: 'var(--primary-dark)' }}>{h.ten_khoa_hoc}</strong>
                                     </div>
                                     <div style={{ fontSize: '.75rem', color: 'var(--text-muted)', marginTop: '.4rem' }}>
                                         <MI name="event" style={{ fontSize: '.8rem', verticalAlign: 'middle' }} /> Ngày gửi: {new Date(h.ngay_tuyen).toLocaleDateString('vi-VN')}

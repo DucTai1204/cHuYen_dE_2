@@ -4,7 +4,7 @@ import api from '../../services/api';
 const MI = ({ name, style }) => <span className="material-icons" style={{ fontSize: '1.2rem', ...style }}>{name}</span>;
 
 const ORANGE_GRADIENT = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
-const BLUE_GRADIENT = 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)';
+const BLUE_GRADIENT = 'linear-gradient(135deg, var(--secondary) 0%, var(--secondary-dark) 100%)';
 const GREEN_GRADIENT = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
 
 const SellerRevenue = () => {
@@ -134,7 +134,7 @@ const SellerRevenue = () => {
                             <tr key={i} className="table-row-hover" style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.2s' }}>
                                 <td style={{ padding: '1.25rem', fontWeight: 600, color: '#1e293b' }}>{c.ten_khoa_hoc}</td>
                                 <td style={{ padding: '1.25rem', textAlign: 'center' }}>
-                                    <span style={{ background: '#eff6ff', color: '#2563eb', padding: '.3rem .7rem', borderRadius: '8px', fontWeight: 700, fontSize: '.8rem' }}>
+                                    <span style={{ background: 'var(--primary-light)', color: 'var(--secondary)', padding: '.3rem .7rem', borderRadius: '8px', fontWeight: 700, fontSize: '.8rem' }}>
                                         {c.tong_hoc_vien}
                                     </span>
                                 </td>

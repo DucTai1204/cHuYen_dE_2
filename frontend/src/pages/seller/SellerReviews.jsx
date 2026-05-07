@@ -75,7 +75,7 @@ const SellerReviews = () => {
                                     
                                     {/* Học viên */}
                                     <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '20px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '1rem', color: '#2563eb' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '1rem', color: 'var(--primary)' }}>
                                             <MI name="school" /> <span style={{ fontWeight: 800, fontSize: '.85rem' }}>HỌC VIÊN</span>
                                         </div>
                                         <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#1e293b', marginBottom: '.25rem' }}>

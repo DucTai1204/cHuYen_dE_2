@@ -129,7 +129,7 @@ const VideoPlayer = ({ lesson, onComplete }) => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <span className="material-icons" style={{ fontSize: '.9rem' }}>track_changes</span> Mục tiêu: {threshold}%
                     </div>
-                    <div style={{ color: watchedPct >= threshold ? '#10b981' : '#fbbf24', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <div style={{ color: watchedPct >= threshold ? '#10b981' : 'var(--primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <span className="material-icons" style={{ fontSize: '.9rem' }}>trending_up</span> Đã xem: {watchedPct}% {watchedPct >= threshold && <span className="material-icons" style={{ fontSize: '1rem' }}>check_circle</span>}
                     </div>
                 </div>
@@ -151,7 +151,7 @@ const VideoPlayer = ({ lesson, onComplete }) => {
             <div style={{ marginTop: '.75rem', padding: '.75rem', background: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.75rem', marginBottom: '.4rem' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Tiến độ ghi nhận: <strong>{watchedPct}%</strong></span>
-                    <span style={{ color: watchedPct >= threshold ? '#059669' : '#d97706', fontWeight: 700 }}>
+                    <span style={{ color: watchedPct >= threshold ? '#059669' : 'var(--primary)', fontWeight: 700 }}>
                         {watchedPct >= threshold ? 'ĐÃ ĐẠT YÊU CẦU' : `Cần xem thêm ${threshold - watchedPct}%`}
                     </span>
                 </div>
@@ -160,7 +160,7 @@ const VideoPlayer = ({ lesson, onComplete }) => {
                         style={{
                             height: '100%',
                             width: `${Math.min(watchedPct, 100)}%`,
-                            background: watchedPct >= threshold ? '#10b981' : '#f59e0b',
+                            background: watchedPct >= threshold ? '#10b981' : 'var(--primary)',
                             transition: 'width 0.3s ease'
                         }}
                     />
@@ -198,8 +198,8 @@ const TextViewer = ({ lesson, onComplete }) => {
             style={{ height: '68vh', overflowY: 'auto', padding: '1.5rem 2rem', background: '#fff', borderRadius: '12px', border: '1px solid var(--border)', lineHeight: 1.8, fontSize: '.95rem', color: 'var(--text-primary)', position: 'relative' }}
         >
             <div style={{ position: 'sticky', top: 0, background: 'linear-gradient(to bottom, #fff 80%, transparent)', paddingBottom: '.5rem', marginBottom: '1rem', zIndex: 1, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span className="material-icons" style={{ fontSize: '1.1rem', color: '#60a5fa' }}>info</span>
-                <p style={{ fontSize: '.78rem', color: '#60a5fa', fontWeight: 600, margin: 0 }}>Cuộn xuống đến cuối để hoàn thành bài học</p>
+                <span className="material-icons" style={{ fontSize: '1.1rem', color: 'var(--primary)' }}>info</span>
+                <p style={{ fontSize: '.78rem', color: 'var(--primary)', fontWeight: 600, margin: 0 }}>Cuộn xuống đến cuối để hoàn thành bài học</p>
             </div>
             {lesson.loai_bai === 'TaiLieu' && lesson.noi_dung_url ? (
                 <iframe
@@ -238,7 +238,7 @@ const ModernModal = ({ isOpen, title, children, onClose, icon = "info", type = "
     const colors = {
         error: { bg: '#fee2e2', text: '#991b1b', icon: '#ef4444' },
         warning: { bg: '#fef3c7', text: '#92400e', icon: '#f59e0b' },
-        info: { bg: '#eff6ff', text: '#1e40af', icon: '#3b82f6' }
+        info: { bg: 'var(--primary-light)', text: 'var(--secondary)', icon: 'var(--primary)' }
     };
     const c = colors[type] || colors.info;
 
@@ -429,7 +429,7 @@ const QuizViewer = ({ lesson, onComplete }) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '300px', margin: '0 auto' }}>
                 <button 
                     onClick={() => setViewMode('review')}
-                    style={{ padding: '1rem', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.5rem', transition: 'all .2s' }}
+                    style={{ padding: '1rem', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.5rem', transition: 'all .2s' }}
                     onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
                     onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
                 >
@@ -456,7 +456,7 @@ const QuizViewer = ({ lesson, onComplete }) => {
 
     return (
         <div>
-            <div style={{ background: 'linear-gradient(135deg, #1e40af, #3b82f6)', color: '#fff', borderRadius: '12px', padding: '1.25rem 1.5rem', marginBottom: '1.25rem', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ background: 'linear-gradient(135deg, var(--secondary), var(--primary))', color: '#fff', borderRadius: '12px', padding: '1.25rem 1.5rem', marginBottom: '1.25rem', position: 'relative', overflow: 'hidden' }}>
                 <div style={{ position: 'absolute', top: '-10px', right: '-10px', opacity: 0.1, fontSize: '5rem' }}>🛡️</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
@@ -494,9 +494,9 @@ const QuizViewer = ({ lesson, onComplete }) => {
                 {questions.map((_, i) => {
                     const qId = questions[i].id_cau_hoi;
                     const isAnswered = answers[qId] !== undefined;
-                    let bg = isAnswered ? '#eff6ff' : '#f8fafc';
-                    let text = isAnswered ? '#3b82f6' : '#94a3b8';
-                    let border = isAnswered ? '#3b82f6' : '#e2e8f0';
+                    let bg = isAnswered ? 'var(--primary-light)' : '#f8fafc';
+                    let text = isAnswered ? 'var(--primary)' : '#94a3b8';
+                    let border = isAnswered ? 'var(--primary)' : '#e2e8f0';
 
                     if (viewMode === 'review' && result) {
                         const detail = result.results_detail?.find(d => d.id_cau_hoi === qId);
@@ -571,8 +571,8 @@ const QuizViewer = ({ lesson, onComplete }) => {
                                 const isCorrectAnswer = isReview && opt.id_lua_chon === qResult?.correct_choice_id;
                                 const isWrongSelection = isReview && sel && !qResult?.is_correct;
 
-                                let border = sel ? '#3b82f6' : 'var(--border)';
-                                let bg = sel ? '#eff6ff' : '#fff';
+                                let border = sel ? 'var(--primary)' : 'var(--border)';
+                                let bg = sel ? 'var(--primary-light)' : '#fff';
                                 if (isReview) {
                                     if (isCorrectAnswer) {
                                         border = '#10b981';
@@ -625,7 +625,7 @@ const QuizViewer = ({ lesson, onComplete }) => {
                 <button
                     onClick={handleSubmit}
                     disabled={!allAnswered || submitting}
-                    style={{ width: '100%', padding: '1rem', background: allAnswered ? '#2563eb' : '#94a3b8', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: allAnswered ? 'pointer' : 'not-allowed', fontSize: '1.1rem', transition: 'all .2s', boxShadow: allAnswered ? '0 10px 20px rgba(37,99,235,0.2)' : 'none' }}
+                    style={{ width: '100%', padding: '1rem', background: allAnswered ? 'var(--primary)' : '#94a3b8', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, cursor: allAnswered ? 'pointer' : 'not-allowed', fontSize: '1.1rem', transition: 'all .2s', boxShadow: allAnswered ? '0 10px 20px rgba(139, 107, 79, 0.2)' : 'none' }}
                 >
                     {submitting ? 'ĐANG NỘP BÀI...' : allAnswered ? '✅ Nộp bài ngay' : `Vui lòng trả lời đủ ${questions.length} câu`}
                 </button>
@@ -774,7 +774,7 @@ const LessonView = () => {
     /* ── Loading ── */
     if (loading) return (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 4rem)', flexDirection: 'column', gap: '1rem', color: 'var(--text-muted)' }}>
-            <div style={{ width: 36, height: 36, border: '3px solid #eff6ff', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            <div style={{ width: 36, height: 36, border: '3px solid var(--primary-light)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
             <span>Đang tải bài học...</span>
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
@@ -785,7 +785,7 @@ const LessonView = () => {
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🚫</div>
             <div style={{ fontWeight: 600, marginBottom: '.5rem' }}>Bạn chưa đăng ký khóa học này</div>
             <Link to={`/courses/${courseId}`}>
-                <button style={{ padding: '.6rem 1.4rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '.75rem', fontWeight: 600 }}>
+                <button style={{ padding: '.6rem 1.4rem', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '.75rem', fontWeight: 600 }}>
                     ← Về trang khóa học
                 </button>
             </Link>
@@ -881,7 +881,7 @@ const LessonView = () => {
                                                 width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '.75rem',
                                                 padding: '.75rem 1rem .75rem 1.5rem', border: 'none', cursor: locked ? 'not-allowed' : 'pointer',
                                                 background: active ? 'rgba(59,130,246,.18)' : 'transparent',
-                                                borderLeft: active ? '4px solid #3b82f6' : '4px solid transparent',
+                                                borderLeft: active ? '4px solid var(--primary)' : '4px solid transparent',
                                                 color: locked ? '#475569' : active ? '#fff' : '#cbd5e1', fontSize: '.85rem',
                                                 transition: 'all .2s',
                                                 whiteSpace: 'nowrap',
@@ -890,7 +890,7 @@ const LessonView = () => {
                                         >
                                             <span className="material-icons" style={{
                                                 fontSize: '1.2rem',
-                                                color: done ? '#10b981' : locked ? '#475569' : active ? '#3b82f6' : '#64748b'
+                                                color: done ? '#10b981' : locked ? '#475569' : active ? 'var(--primary)' : '#64748b'
                                             }}>
                                                 {done ? 'check_circle' : locked ? 'lock' : TYPE_ICON[l.loai_bai] || 'play_circle'}
                                             </span>
@@ -917,7 +917,7 @@ const LessonView = () => {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', fontSize: '.78rem', color: 'var(--text-muted)', marginBottom: '.35rem' }}>
                                         <span>{currentLesson._chapter}</span>
                                         <span>›</span>
-                                        <span style={{ background: '#eff6ff', color: '#2563eb', padding: '.1rem .4rem', borderRadius: '4px', fontWeight: 600 }}>
+                                        <span style={{ background: 'var(--primary-light)', color: 'var(--primary)', padding: '.1rem .4rem', borderRadius: '4px', fontWeight: 600 }}>
                                             {TYPE_LABEL[currentLesson.loai_bai] || currentLesson.loai_bai}
                                         </span>
                                         {completedIds.has(currentLesson.id_bai_giang) && (
@@ -963,7 +963,7 @@ const LessonView = () => {
                                     <button
                                         onClick={() => currentIdx < flatLessons.length - 1 && handleSelectLesson(flatLessons[currentIdx + 1])}
                                         disabled={currentIdx >= flatLessons.length - 1}
-                                        style={{ padding: '.65rem 1.2rem', background: currentIdx < flatLessons.length - 1 ? '#2563eb' : '#fff', color: currentIdx < flatLessons.length - 1 ? '#fff' : '#cbd1d8', border: '1px solid var(--border)', borderRadius: '10px', cursor: currentIdx < flatLessons.length - 1 ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: '.875rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                        style={{ padding: '.65rem 1.2rem', background: currentIdx < flatLessons.length - 1 ? 'var(--primary)' : '#fff', color: currentIdx < flatLessons.length - 1 ? '#fff' : '#cbd1d8', border: '1px solid var(--border)', borderRadius: '10px', cursor: currentIdx < flatLessons.length - 1 ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: '.875rem', display: 'flex', alignItems: 'center', gap: '6px' }}
                                     >
                                         Bài tiếp <span className="material-icons" style={{ fontSize: '1.2rem' }}>navigate_next</span>
                                     </button>
@@ -978,7 +978,7 @@ const LessonView = () => {
             {toast && (
                 <div style={{
                     position: 'fixed', bottom: '1.5rem', right: '1.5rem',
-                    background: toast.type === 'error' ? '#ef4444' : toast.type === 'info' ? '#3b82f6' : '#1e293b',
+                    background: toast.type === 'error' ? '#ef4444' : toast.type === 'info' ? 'var(--primary)' : '#1e293b',
                     color: '#fff', padding: '.75rem 1.25rem', borderRadius: '10px', fontSize: '.875rem',
                     zIndex: 9999, boxShadow: '0 10px 30px rgba(0,0,0,.2)',
                     maxWidth: 360, animation: 'fadeUp .25s ease both',

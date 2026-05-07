@@ -248,7 +248,7 @@ const RevenueModal = ({ courses, onClose }) => {
                                     >
                                         <span style={{ fontSize: '.9rem' }}>{medals[i] || <span style={{ color: 'var(--text-muted)', fontSize: '.78rem' }}>{i + 1}</span>}</span>
                                         <span style={{ fontSize: '.83rem', fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.ten_khoa_hoc}</span>
-                                        <span style={{ fontSize: '.82rem', textAlign: 'right', color: '#2563eb', fontWeight: 600 }}>{c.tong_hoc_vien || 0}</span>
+                                        <span style={{ fontSize: '.82rem', textAlign: 'right', color: 'var(--primary)', fontWeight: 600 }}>{c.tong_hoc_vien || 0}</span>
                                         <span style={{ fontSize: '.78rem', textAlign: 'right', color: 'var(--text-muted)' }}>{Number(c.gia_tien || 0).toLocaleString('vi-VN')}₫</span>
                                         <span style={{ fontSize: '.82rem', textAlign: 'right', fontWeight: 700, color: c.rev > 0 ? '#059669' : 'var(--text-muted)' }}>{c.rev > 0 ? fmtVnd(c.rev) : '—'}</span>
                                     </div>
@@ -271,7 +271,7 @@ const RevenueModal = ({ courses, onClose }) => {
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '.35rem', alignItems: 'baseline' }}>
                                                 <span style={{ fontSize: '.83rem', fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '55%' }}>{c.ten_khoa_hoc}</span>
                                                 <div style={{ display: 'flex', gap: '1rem', flexShrink: 0 }}>
-                                                    <span style={{ fontSize: '.75rem', color: '#2563eb', fontWeight: 700 }}>{c.tong_hoc_vien || 0} HV</span>
+                                                    <span style={{ fontSize: '.75rem', color: 'var(--primary)', fontWeight: 700 }}>{c.tong_hoc_vien || 0} HV</span>
                                                     <span style={{ fontSize: '.75rem', color: ORANGE, fontWeight: 700 }}>{rev > 0 ? fmtVnd(rev) : 'Miễn phí'}</span>
                                                 </div>
                                             </div>
@@ -304,10 +304,12 @@ const Toast = ({ msg, type = 'success' }) => (
 );
 
 /* ─────────── COURSE ROW ─────────── */
+const COURSE_COLUMNS = '1fr 150px 120px 180px';
+
 const CourseRow = ({ course, onPublish, onUnpublish }) => {
     const rev = (course.gia_tien || 0) * (course.tong_hoc_vien || 0);
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto auto', alignItems: 'center', gap: '1rem', padding: '.85rem 1.25rem', borderBottom: '1px solid #f1f5f9', transition: 'background .15s' }}
+        <div style={{ display: 'grid', gridTemplateColumns: COURSE_COLUMNS, alignItems: 'center', gap: '1rem', padding: '.85rem 1.25rem', borderBottom: '1px solid #f1f5f9', transition: 'background .15s' }}
             onMouseEnter={e => e.currentTarget.style.background = '#fffbeb'}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
         >
@@ -327,23 +329,25 @@ const CourseRow = ({ course, onPublish, onUnpublish }) => {
                     <div style={{ fontSize: '.72rem', color: 'var(--text-muted)', marginTop: '.1rem' }}>{course.tong_hoc_vien || 0} học viên · {course.tong_bai || 0} bài</div>
                 </div>
             </div>
-            <StatusBadge published={course.cong_khai} />
-            <div style={{ textAlign: 'right', minWidth: 90 }}>
+            <div style={{ justifySelf: 'center' }}>
+                <StatusBadge published={course.cong_khai} />
+            </div>
+            <div style={{ textAlign: 'center', minWidth: 90 }}>
                 <div style={{ fontWeight: 700, fontSize: '.88rem', color: '#059669' }}>{rev >= 1e6 ? `${(rev / 1e6).toFixed(1)}tr` : `${(rev / 1000).toFixed(0)}k`}₫</div>
                 <div style={{ fontSize: '.68rem', color: 'var(--text-muted)' }}>{Number(course.gia_tien).toLocaleString('vi-VN')}₫/kh</div>
             </div>
-            <div style={{ display: 'flex', gap: '.4rem' }}>
+            <div style={{ display: 'flex', gap: '.4rem', justifyContent: 'center' }}>
                 <Link to={`/seller/courses/${course.id_khoa_hoc}/builder`}>
-                    <button style={{ padding: '.35rem .75rem', background: 'var(--bg-app)', border: '1px solid var(--border)', borderRadius: '7px', cursor: 'pointer', fontSize: '.78rem', fontWeight: 500, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '.25rem' }}>
+                    <button style={{ width: 75, padding: '.35rem 0', background: 'var(--bg-app)', border: '1px solid var(--border)', borderRadius: '7px', cursor: 'pointer', fontSize: '.78rem', fontWeight: 500, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.25rem' }}>
                         <MI name="edit" style={{ fontSize: '.9rem' }} /> Sửa
                     </button>
                 </Link>
                 {course.cong_khai ? (
-                    <button onClick={() => onUnpublish(course.id_khoa_hoc)} style={{ padding: '.35rem .75rem', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '7px', cursor: 'pointer', fontSize: '.78rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '.25rem' }}>
+                    <button onClick={() => onUnpublish(course.id_khoa_hoc)} style={{ width: 75, padding: '.35rem 0', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '7px', cursor: 'pointer', fontSize: '.78rem', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.25rem' }}>
                         <MI name="visibility_off" style={{ fontSize: '.9rem' }} /> Ẩn
                     </button>
                 ) : (
-                    <button onClick={() => onPublish(course.id_khoa_hoc)} style={{ padding: '.35rem .75rem', background: ORANGE_LIGHT, color: ORANGE_DARK, border: `1px solid #fcd34d`, borderRadius: '7px', cursor: 'pointer', fontSize: '.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '.25rem' }}>
+                    <button onClick={() => onPublish(course.id_khoa_hoc)} style={{ width: 75, padding: '.35rem 0', background: ORANGE_LIGHT, color: ORANGE_DARK, border: `1px solid #fcd34d`, borderRadius: '7px', cursor: 'pointer', fontSize: '.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.25rem' }}>
                         <MI name="publish" style={{ fontSize: '.9rem' }} /> Đăng
                     </button>
                 )}
@@ -447,23 +451,36 @@ const SellerDashboard = () => {
                 </div>
 
                 {/* ── STATS STRIP ── */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-                    {[
-                        { icon: 'menu_book', label: 'Tổng khóa học', value: courses.length, sub: `${published.length} đbán · ${drafts.length} nháp` },
-                        { icon: 'groups', label: 'Học viên', value: totalStudents, sub: 'Tổng đăng ký' },
-                        { icon: 'paid', label: 'Doanh thu TT', value: fmtVnd(totalRevenue), sub: 'Tạm tính' },
-                        { icon: 'account_balance_wallet', label: 'Số dư khả dụng', value: fmtVnd(totalRevenue * 0.9), sub: 'Sau phí 10%' },
-                    ].map((s, i) => (
-                        <div key={i} className="stagger-item" style={{ animationDelay: `${i * 0.1}s`, background: '#fff', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem 1.25rem', boxShadow: 'var(--shadow-sm)', display: 'flex', alignItems: 'center', gap: '.85rem' }}>
-                            <div style={{ width: 40, height: 40, background: ORANGE_LIGHT, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                <MI name={s.icon} style={{ fontSize: '1.3rem', color: ORANGE }} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '1.25rem', marginBottom: '1.5rem' }}>
+                    {/* 3 thẻ bên trái - khớp với cột danh sách khóa học */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem' }}>
+                        {[
+                            { icon: 'menu_book', label: 'Tổng khóa học', value: courses.length, sub: `${published.length} đbán · ${drafts.length} nháp` },
+                            { icon: 'groups', label: 'Học viên', value: totalStudents, sub: 'Tổng đăng ký' },
+                            { icon: 'paid', label: 'Doanh thu TT', value: fmtVnd(totalRevenue), sub: 'Tạm tính' },
+                        ].map((s, i) => (
+                            <div key={i} className="stagger-item" style={{ animationDelay: `${i * 0.1}s`, background: '#fff', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem 1.25rem', boxShadow: 'var(--shadow-sm)', display: 'flex', alignItems: 'center', gap: '.85rem' }}>
+                                <div style={{ width: 40, height: 40, background: ORANGE_LIGHT, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <MI name={s.icon} style={{ fontSize: '1.3rem', color: ORANGE }} />
+                                </div>
+                                <div style={{ minWidth: 0 }}>
+                                    <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#1e293b', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.value}</div>
+                                    <div style={{ fontSize: '.72rem', color: 'var(--text-muted)', marginTop: '.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.sub}</div>
+                                </div>
                             </div>
-                            <div>
-                                <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#1e293b', lineHeight: 1 }}>{s.value}</div>
-                                <div style={{ fontSize: '.72rem', color: 'var(--text-muted)', marginTop: '.2rem' }}>{s.sub}</div>
-                            </div>
+                        ))}
+                    </div>
+
+                    {/* Thẻ thứ 4 bên phải - khớp với cột Sidebar */}
+                    <div className="stagger-item" style={{ animationDelay: '0.3s', background: '#fff', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem 1.25rem', boxShadow: 'var(--shadow-sm)', display: 'flex', alignItems: 'center', gap: '.85rem' }}>
+                        <div style={{ width: 40, height: 40, background: ORANGE_LIGHT, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <MI name="account_balance_wallet" style={{ fontSize: '1.3rem', color: ORANGE }} />
                         </div>
-                    ))}
+                        <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#1e293b', lineHeight: 1 }}>{fmtVnd(totalRevenue * 0.9)}</div>
+                            <div style={{ fontSize: '.72rem', color: 'var(--text-muted)', marginTop: '.2rem' }}>Sau phí 10%</div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* ── 2-COL LAYOUT ── */}
@@ -512,11 +529,11 @@ const SellerDashboard = () => {
                         ) : (
                             <div>
                                 {/* Table header - Sticky */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto auto', gap: '1rem', padding: '.6rem 1.25rem', background: '#f8fafc', position: 'sticky', top: 0, zIndex: 10, borderBottom: '1px solid #f1f5f9' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: COURSE_COLUMNS, gap: '1rem', padding: '.6rem 1.25rem', background: '#f8fafc', position: 'sticky', top: 0, zIndex: 10, borderBottom: '1px solid #f1f5f9' }}>
                                     <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Khóa học</span>
-                                    <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Trạng thái</span>
-                                    <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'right', minWidth: 90 }}>Doanh thu</span>
-                                    <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', minWidth: 100 }}></span>
+                                    <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'center' }}>Trạng thái</span>
+                                    <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'center' }}>Doanh thu</span>
+                                    <span style={{ fontSize: '.7rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'center' }}>Thao tác</span>
                                 </div>
                                 {paginated.map((c, i) => (
                                     <div key={c.id_khoa_hoc} className="stagger-item" style={{ animationDelay: '0s' }}>

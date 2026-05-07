@@ -76,7 +76,7 @@ const ChapterAccordion = ({ chapter, defaultOpen = false, isEnrolled, courseId, 
                                 onMouseLeave={e => { e.currentTarget.style.background = '#fafafa'; }}
                             >
                                 <span style={{ display: 'flex', gap: '.5rem', alignItems: 'center', color: locked ? 'var(--text-muted)' : accessible ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                                    <span style={{ color: done ? '#10b981' : locked ? 'var(--text-muted)' : accessible ? '#2563eb' : 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
+                                    <span style={{ color: done ? '#10b981' : locked ? 'var(--text-muted)' : accessible ? 'var(--primary)' : 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
                                         {done ? <MI name="check_circle" style={{ color: '#10b981', fontSize: '1rem' }} /> : locked ? <MI name="lock" style={{ fontSize: '1rem' }} /> : accessible ? <MI name={typeIcon(l.loai_bai)} style={{ fontSize: '1rem' }} /> : <MI name="lock" style={{ fontSize: '1rem' }} />}
                                     </span>
                                     <span>{l.ten_bai_giang}</span>
@@ -105,7 +105,7 @@ const ModernModal = ({ isOpen, title, children, onClose, icon = "info", type = "
     const colors = {
         error: { bg: '#fee2e2', text: '#991b1b', icon: '#ef4444' },
         warning: { bg: '#fef3c7', text: '#92400e', icon: '#f59e0b' },
-        info: { bg: '#eff6ff', text: '#1e40af', icon: '#3b82f6' }
+        info: { bg: 'var(--primary-light)', text: 'var(--secondary)', icon: 'var(--primary)' }
     };
     const c = colors[type] || colors.info;
 
@@ -301,7 +301,7 @@ const CourseDetail = () => {
     /* ── Loading ── */
     if (loading) return (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100vh - 3rem)', flexDirection: 'column', gap: '1rem', color: 'var(--text-muted)' }}>
-            <div style={{ width: 36, height: 36, border: '3px solid #eff6ff', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            <div style={{ width: 36, height: 36, border: '3px solid var(--primary-light)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
             <span style={{ fontSize: '.875rem' }}>Đang tải khóa học...</span>
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
@@ -311,7 +311,7 @@ const CourseDetail = () => {
         <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
             <MI name="search_off" style={{ fontSize: '3rem', color: '#cbd5e1' }} />
             <div style={{ fontWeight: 600, marginBottom: '.5rem' }}>Không tìm thấy khóa học</div>
-            <Link to="/dashboard"><button style={{ padding: '.55rem 1.2rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '.75rem' }}>← Quay lại</button></Link>
+            <Link to="/dashboard"><button style={{ padding: '.55rem 1.2rem', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '.75rem' }}>← Quay lại</button></Link>
         </div>
     );
 
@@ -329,7 +329,7 @@ const CourseDetail = () => {
             <div style={{ display: 'flex', gap: '.5rem', marginBottom: '.75rem', flexWrap: 'wrap' }}>
                 <span className="badge badge-green"><MI name="verified" style={{ fontSize: '.9rem', verticalAlign: 'middle' }} /> Được kiểm định</span>
                 <span className="badge badge-orange"><MI name="workspace_premium" style={{ fontSize: '.9rem', verticalAlign: 'middle' }} /> Cấp chứng chỉ số</span>
-                <span className="badge badge-blue"><MI name="security" style={{ fontSize: '.9rem', verticalAlign: 'middle' }} /> Giám sát AI</span>
+                <span className="badge badge-primary"><MI name="security" style={{ fontSize: '.9rem', verticalAlign: 'middle' }} /> Giám sát AI</span>
                 {course.danh_muc && <span className="badge badge-gray">{course.danh_muc}</span>}
                 <span style={{ padding: '.2rem .6rem', borderRadius: '99px', fontSize: '.72rem', fontWeight: 600, background: '#f1f5f9', color: '#64748b' }}>{TRINH_DO[course.trinh_do] || course.trinh_do}</span>
                 {Number(course.tong_so_danh_gia_ntd) > 0 && (
@@ -358,11 +358,11 @@ const CourseDetail = () => {
                         </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
-                        <div style={{ width: 40, height: 40, background: '#eff6ff', color: '#1e3a8a', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: 40, height: 40, background: 'var(--primary-light)', color: 'var(--secondary)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <MI name="work" style={{ fontSize: '1.5rem' }} />
                         </div>
                         <div>
-                            <div style={{ fontWeight: 800, color: '#1e3a8a', fontSize: '.9rem' }}>{course.so_nguoi_co_viec_lam} Học viên đã tuyển</div>
+                            <div style={{ fontWeight: 800, color: 'var(--secondary)', fontSize: '.9rem' }}>{course.so_nguoi_co_viec_lam} Học viên đã tuyển</div>
                             <div style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>Mạng lưới đối tác rộng khắp</div>
                         </div>
                     </div>
@@ -457,15 +457,15 @@ const CourseDetail = () => {
 
                     {/* If enrolled: show progress */}
                     {enrollment && (
-                        <div style={{ background: 'linear-gradient(135deg, #eff6ff, #dbeafe)', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '1rem 1.25rem' }}>
+                        <div style={{ background: 'linear-gradient(135deg, var(--primary-light), var(--bg-white))', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem 1.25rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '.5rem' }}>
-                                <span style={{ fontWeight: 700, fontSize: '.9rem', color: '#1e40af', display: 'flex', alignItems: 'center', gap: '.3rem' }}><MI name="bar_chart" style={{ fontSize: '1rem' }} /> Tiến độ học tập của bạn</span>
-                                <span style={{ fontSize: '.9rem', fontWeight: 700, color: '#2563eb' }}>{pct}%</span>
+                                <span style={{ fontWeight: 700, fontSize: '.9rem', color: 'var(--secondary)', display: 'flex', alignItems: 'center', gap: '.3rem' }}><MI name="bar_chart" style={{ fontSize: '1rem' }} /> Tiến độ học tập của bạn</span>
+                                <span style={{ fontSize: '.9rem', fontWeight: 700, color: 'var(--primary)' }}>{pct}%</span>
                             </div>
-                            <div style={{ height: 8, background: 'rgba(255,255,255,.6)', borderRadius: '99px', overflow: 'hidden' }}>
-                                <div style={{ height: '100%', width: `${pct}%`, background: '#2563eb', borderRadius: '99px', transition: 'width .5s' }} />
+                            <div style={{ height: 8, background: 'var(--border)', borderRadius: '99px', overflow: 'hidden' }}>
+                                <div style={{ height: '100%', width: `${pct}%`, background: 'var(--primary)', borderRadius: '99px', transition: 'width .5s' }} />
                             </div>
-                            <div style={{ fontSize: '.78rem', color: '#3b82f6', marginTop: '.4rem' }}>
+                            <div style={{ fontSize: '.78rem', color: 'var(--primary-dark)', marginTop: '.4rem' }}>
                                 {pct >= 100 ? <span style={{ display: 'flex', alignItems: 'center', gap: '.3rem' }}><MI name="celebration" style={{ fontSize: '1rem' }} /> Bạn đã hoàn thành khóa học!</span> : pct > 0 ? `Tiếp tục để hoàn thành ${100 - pct}% còn lại` : 'Bạn chưa bắt đầu — hãy học bài đầu tiên!'}
                             </div>
                         </div>
@@ -533,9 +533,9 @@ const CourseDetail = () => {
                     {/* Instructor */}
                     {course.ten_giang_vien && (
                         <div className="card">
-                            <h3 style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '.4rem' }}><MI name="person" style={{ fontSize: '1.2rem', color: '#2563eb' }} /> Về người bán khóa học</h3>
+                            <h3 style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '.4rem' }}><MI name="person" style={{ fontSize: '1.2rem', color: 'var(--primary)' }} /> Về người bán khóa học</h3>
                             <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                                <div style={{ width: 56, height: 56, background: '#2563eb', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '1.1rem', flexShrink: 0 }}>
+                                <div style={{ width: 56, height: 56, background: 'var(--primary)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '1.1rem', flexShrink: 0 }}>
                                     {course.ten_giang_vien.charAt(0).toUpperCase()}
                                 </div>
                                 <div>
@@ -722,10 +722,10 @@ const CourseDetail = () => {
 
                         {/* Enrolled state */}
                         {isRecruiter ? (
-                            <div style={{ background: 'linear-gradient(135deg, #eff6ff, #dbeafe)', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '1.25rem', textAlign: 'center' }}>
-                                <MI name="visibility" style={{ fontSize: '2rem', color: '#2563eb', marginBottom: '.5rem' }} />
-                                <div style={{ fontWeight: 800, color: '#1e40af', fontSize: '.9rem', marginBottom: '.5rem' }}>CHẾ ĐỘ NHÀ TUYỂN DỤNG</div>
-                                <p style={{ fontSize: '.75rem', color: '#3b82f6', lineHeight: 1.5, margin: 0 }}>
+                            <div style={{ background: 'linear-gradient(135deg, var(--primary-light), var(--bg-white))', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.25rem', textAlign: 'center' }}>
+                                <MI name="visibility" style={{ fontSize: '2rem', color: 'var(--primary)', marginBottom: '.5rem' }} />
+                                <div style={{ fontWeight: 800, color: 'var(--secondary)', fontSize: '.9rem', marginBottom: '.5rem' }}>CHẾ ĐỘ NHÀ TUYỂN DỤNG</div>
+                                <p style={{ fontSize: '.75rem', color: 'var(--primary-dark)', lineHeight: 1.5, margin: 0 }}>
                                     Bạn có quyền xem toàn bộ nội dung giáo trình bên dưới để đánh giá chất lượng đào tạo trước khi săn nhân tài.
                                 </p>
                             </div>
@@ -739,12 +739,12 @@ const CourseDetail = () => {
                                 {/* Progress bar */}
                                 <div style={{ marginBottom: '1rem' }}>
                                     <div style={{ height: 8, background: '#e2e8f0', borderRadius: '99px', overflow: 'hidden' }}>
-                                        <div style={{ height: '100%', width: `${pct}%`, background: pct >= 100 ? '#10b981' : '#2563eb', borderRadius: '99px' }} />
+                                        <div style={{ height: '100%', width: `${pct}%`, background: pct >= 100 ? '#10b981' : 'var(--primary)', borderRadius: '99px' }} />
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => navigate(`/courses/${id}/learn`)}
-                                    style={{ width: '100%', padding: '.75rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', fontSize: '.95rem', marginBottom: '.6rem' }}
+                                    style={{ width: '100%', padding: '.75rem', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', fontSize: '.95rem', marginBottom: '.6rem' }}
                                 >
                                     {pct >= 100 ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem' }}><MI name="workspace_premium" style={{ fontSize: '1rem' }} /> Xem chứng chỉ</span> : pct > 0 ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem' }}><MI name="play_arrow" style={{ fontSize: '1rem' }} /> Tiếp tục học</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem' }}><MI name="play_arrow" style={{ fontSize: '1rem' }} /> Bắt đầu học ngay</span>}
                                 </button>
