@@ -228,10 +228,12 @@ class TienDoBaiGiangSerializer(serializers.ModelSerializer):
 
 class DanhGiaKhoaHocSerializer(serializers.ModelSerializer):
     ten_nguoi_dung = serializers.CharField(source='id_nguoi_dung.username', read_only=True)
+    ho_va_ten = serializers.CharField(source='id_nguoi_dung.ho_va_ten', read_only=True)
+    hinh_anh_nguoi_dung = serializers.CharField(source='id_nguoi_dung.hinh_anh_logo', read_only=True)
 
     class Meta:
         model = DanhGiaKhoaHoc
-        fields = ['id_danh_gia', 'id_khoa_hoc', 'id_nguoi_dung', 'ten_nguoi_dung', 'so_sao', 'nhan_xet', 'ngay_tao']
+        fields = ['id_danh_gia', 'id_khoa_hoc', 'id_nguoi_dung', 'ten_nguoi_dung', 'ho_va_ten', 'hinh_anh_nguoi_dung', 'so_sao', 'nhan_xet', 'ngay_tao']
         read_only_fields = ['id_nguoi_dung', 'ngay_tao']
 
 

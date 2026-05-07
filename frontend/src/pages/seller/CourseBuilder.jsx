@@ -173,8 +173,52 @@ const ChapterBlock = ({ chapter, selectedLesson, onSelectLesson, onDeleteLesson,
 const QuizEditor = ({ lesson, onUpdate }) => {
     const [questions, setQuestions] = useState(lesson.cau_hoi || []);
     const [expandedQ, setExpandedQ] = useState(null);
+    const [selectedQs, setSelectedQs] = useState([]);
+    const [bulkScore, setBulkScore] = useState(1);
 
-    useEffect(() => { setQuestions(lesson.cau_hoi || []); }, [lesson.id_bai_giang]);
+    useEffect(() => { 
+        setQuestions(lesson.cau_hoi || []); 
+        setSelectedQs([]); // Reset selection when lesson changes
+    }, [lesson.id_bai_giang]);
+
+    const toggleSelectAll = () => {
+        if (selectedQs.length === questions.length && questions.length > 0) {
+            setSelectedQs([]);
+        } else {
+            setSelectedQs(questions.map(q => q.id_cau_hoi));
+        }
+    };
+
+    const toggleSelectQuestion = (qId) => {
+        setSelectedQs(prev => prev.includes(qId) ? prev.filter(id => id !== qId) : [...prev, qId]);
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedQs.length === 0) return;
+        if (!window.confirm(`Xóa ${selectedQs.length} câu hỏi đã chọn?`)) return;
+        try {
+            await Promise.all(selectedQs.map(id => api.delete(`/lms/cau-hoi/${id}/`)));
+            const newQs = questions.filter(q => !selectedQs.includes(q.id_cau_hoi));
+            setQuestions(newQs);
+            onUpdate(newQs);
+            setSelectedQs([]);
+        } catch (e) {
+            alert('Lỗi khi xóa hàng loạt');
+        }
+    };
+
+    const handleBulkUpdateScore = async () => {
+        if (selectedQs.length === 0) return;
+        try {
+            await Promise.all(selectedQs.map(id => api.patch(`/lms/cau-hoi/${id}/`, { diem: bulkScore })));
+            const newQs = questions.map(q => selectedQs.includes(q.id_cau_hoi) ? { ...q, diem: bulkScore } : q);
+            setQuestions(newQs);
+            onUpdate(newQs);
+            setSelectedQs([]);
+        } catch (e) {
+            alert('Lỗi khi cập nhật điểm hàng loạt');
+        }
+    };
 
     const addQuestion = async () => {
         try {
@@ -342,11 +386,34 @@ const QuizEditor = ({ lesson, onUpdate }) => {
 
     return (
         <div style={{ marginTop: '.75rem', borderTop: '1px dashed var(--border)', paddingTop: '.75rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '.5rem' }}>
-                <span style={{ fontSize: '.8rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '.3rem' }}>
-                    <MI name="quiz" style={{ color: SELLER_ORANGE, fontSize: '1rem' }} /> {questions.length} câu hỏi
-                </span>
-                <button onClick={addQuestion} style={{ padding: '.25rem .5rem', background: SELLER_ORANGE, color: '#fff', border: 'none', borderRadius: '5px', fontSize: '.7rem', fontWeight: 600, cursor: 'pointer' }}>+ Thêm</button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '.75rem', gap: '.5rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
+                    <span style={{ fontSize: '.8rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '.3rem' }}>
+                        <MI name="quiz" style={{ color: SELLER_ORANGE, fontSize: '1rem' }} /> {questions.length} câu hỏi
+                    </span>
+                    {questions.length > 0 && (
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '.3rem', fontSize: '.75rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                            <input type="checkbox" checked={selectedQs.length === questions.length && questions.length > 0} onChange={toggleSelectAll} style={{ accentColor: SELLER_ORANGE }} />
+                            Chọn tất cả
+                        </label>
+                    )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                    {selectedQs.length > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', background: '#fff7ed', padding: '.25rem .5rem', borderRadius: '6px', border: '1px solid #ffedd5' }}>
+                            <span style={{ fontSize: '.72rem', fontWeight: 700, color: SELLER_ORANGE_DARK }}>{selectedQs.length} đã chọn:</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '.25rem' }}>
+                                <input type="number" value={bulkScore} onChange={e => setBulkScore(parseInt(e.target.value) || 0)} style={{ width: 35, border: '1px solid #fcd34d', borderRadius: '4px', textAlign: 'center', fontSize: '.72rem', padding: '.15rem' }} title="Điểm áp dụng cho các mục đã chọn" />
+                                <button onClick={handleBulkUpdateScore} style={{ background: SELLER_ORANGE, color: '#fff', border: 'none', borderRadius: '4px', fontSize: '.68rem', fontWeight: 700, padding: '.25rem .4rem', cursor: 'pointer' }}>Gán điểm</button>
+                            </div>
+                            <div style={{ width: 1, height: 14, background: '#ffedd5' }} />
+                            <button onClick={handleBulkDelete} style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '4px', fontSize: '.68rem', fontWeight: 700, padding: '.25rem .4rem', cursor: 'pointer' }}>Xóa hết</button>
+                        </div>
+                    )}
+                    <button onClick={addQuestion} style={{ padding: '.35rem .75rem', background: SELLER_ORANGE, color: '#fff', border: 'none', borderRadius: '6px', fontSize: '.75rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '.2rem' }}>
+                        <MI name="add" style={{ fontSize: '1rem', color: '#fff' }} /> Thêm câu hỏi
+                    </button>
+                </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -361,14 +428,21 @@ const QuizEditor = ({ lesson, onUpdate }) => {
                         >
                             {/* Collapsed header */}
                             <div
-                                onClick={() => setExpandedQ(isOpen ? null : q.id_cau_hoi)}
                                 style={{ display: 'flex', alignItems: 'center', gap: '.5rem', padding: '.4rem .6rem', cursor: 'pointer', background: isOpen ? SELLER_ORANGE_LIGHT : '#fafafa', transition: 'background .15s' }}
                             >
-                                <span style={{ fontSize: '.7rem', color: 'var(--text-muted)', width: 14 }}>{isOpen ? '▼' : '▶'}</span>
-                                <span style={{ fontSize: '.75rem', fontWeight: 600, color: SELLER_ORANGE_DARK, flexShrink: 0 }}>C{idx + 1}</span>
-                                <span style={{ flex: 1, fontSize: '.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-primary)' }}>{q.noi_dung}</span>
-                                <span style={{ fontSize: '.65rem', color: 'var(--text-muted)', flexShrink: 0 }}>{(q.lua_chon || []).length} đáp án{correctCount > 0 ? ' ✓' : ''}</span>
-                                <span style={{ fontSize: '.65rem', color: 'var(--text-muted)', flexShrink: 0 }}>{q.diem}đ</span>
+                                <input
+                                    type="checkbox"
+                                    checked={selectedQs.includes(q.id_cau_hoi)}
+                                    onChange={(e) => { e.stopPropagation(); toggleSelectQuestion(q.id_cau_hoi); }}
+                                    style={{ width: 15, height: 15, accentColor: SELLER_ORANGE, cursor: 'pointer' }}
+                                />
+                                <div onClick={() => setExpandedQ(isOpen ? null : q.id_cau_hoi)} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '.5rem', minWidth: 0 }}>
+                                    <span style={{ fontSize: '.7rem', color: 'var(--text-muted)', width: 14 }}>{isOpen ? '▼' : '▶'}</span>
+                                    <span style={{ fontSize: '.75rem', fontWeight: 600, color: SELLER_ORANGE_DARK, flexShrink: 0 }}>C{idx + 1}</span>
+                                    <span style={{ flex: 1, fontSize: '.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-primary)' }}>{q.noi_dung}</span>
+                                    <span style={{ fontSize: '.65rem', color: 'var(--text-muted)', flexShrink: 0 }}>{(q.lua_chon || []).length} đáp án{correctCount > 0 ? ' ✓' : ''}</span>
+                                    <span style={{ fontSize: '.65rem', color: 'var(--text-muted)', flexShrink: 0 }}>{q.diem}đ</span>
+                                </div>
                                 <button onClick={e => { e.stopPropagation(); duplicateQuestion(q.id_cau_hoi); }} title="Nhân bản" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', fontSize: 0 }}><MI name="content_copy" style={{ fontSize: '.85rem' }} /></button>
                                 <button onClick={e => { e.stopPropagation(); deleteQuestion(q.id_cau_hoi); }} title="Xóa" style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '2px', fontSize: 0 }}><MI name="close" style={{ fontSize: '.85rem' }} /></button>
                             </div>

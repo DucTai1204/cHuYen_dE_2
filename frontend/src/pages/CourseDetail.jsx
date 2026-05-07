@@ -589,7 +589,7 @@ const CourseDetail = () => {
                                     <div style={{ padding: '1rem 1.25rem', background: '#fff7ed', borderRadius: '10px', border: '1px solid #ffedd5', marginBottom: '1.5rem', display: 'flex', gap: '.75rem', alignItems: 'center' }}>
                                         <MI name="info" style={{ color: '#d97706', fontSize: '1.2rem' }} />
                                         <span style={{ fontSize: '.82rem', color: '#92400e', fontWeight: 500 }}>
-                                            Bạn cần học xong 100% khóa học để có thể để lại đánh giá (Đang học: {pct}%).
+                                            Bạn cần học xong 100% khóa học để có thể đánh giá (Đang học: {pct}%).
                                         </span>
                                     </div>
                                 )
@@ -601,13 +601,31 @@ const CourseDetail = () => {
                                     <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)', fontSize: '.85rem', fontStyle: 'italic' }}>Chưa có đánh giá nào cho khóa học này.</div>
                                 ) : (
                                     reviews.map(r => (
-                                        <div key={r.id_danh_gia} style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '.3rem' }}>
-                                                <div style={{ fontWeight: 600, fontSize: '.875rem' }}>{r.ten_nguoi_dung}</div>
-                                                <div style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>{new Date(r.ngay_tao).toLocaleDateString('vi-VN')}</div>
+                                        <div key={r.id_danh_gia} style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '1.25rem', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                                            {/* Avatar Column */}
+                                            <div style={{ 
+                                                width: 44, height: 44, borderRadius: '12px', overflow: 'hidden', flexShrink: 0, 
+                                                background: r.hinh_anh_nguoi_dung ? 'transparent' : 'var(--primary-light)', 
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                                fontWeight: 800, color: 'var(--primary)', border: '1px solid #f1f5f9',
+                                                boxShadow: 'var(--shadow-sm)'
+                                            }}>
+                                                {r.hinh_anh_nguoi_dung ? (
+                                                    <img src={r.hinh_anh_nguoi_dung} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                ) : (
+                                                    (r.ho_va_ten || r.ten_nguoi_dung)?.[0]?.toUpperCase() || '?'
+                                                )}
                                             </div>
-                                            <div style={{ marginBottom: '.4rem' }}><Stars n={r.so_sao} /></div>
-                                            <p style={{ fontSize: '.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{r.nhan_xet}</p>
+
+                                            {/* Content Column */}
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '.2rem' }}>
+                                                    <div style={{ fontWeight: 700, fontSize: '.9rem', color: '#1e293b' }}>{r.ho_va_ten || r.ten_nguoi_dung}</div>
+                                                    <div style={{ fontSize: '.75rem', color: 'var(--text-muted)' }}>{new Date(r.ngay_tao).toLocaleDateString('vi-VN')}</div>
+                                                </div>
+                                                <div style={{ marginBottom: '.5rem' }}><Stars n={r.so_sao} /></div>
+                                                <p style={{ fontSize: '.875rem', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>{r.nhan_xet}</p>
+                                            </div>
                                         </div>
                                     ))
                                 )}
@@ -742,7 +760,14 @@ const CourseDetail = () => {
                                         </div>
                                     </div>
                                     <button
-                                        onClick={() => navigate(`/courses/${id}/learn`)}
+                                        onClick={() => {
+                                            const cert = enrollment?.chung_chi?.[0];
+                                            if (pct >= 100 && cert) {
+                                                navigate(`/verify/${cert.ma_uuid_chung_chi}`);
+                                            } else {
+                                                navigate(`/courses/${id}/learn`);
+                                            }
+                                        }}
                                         style={{ width: '100%', padding: '.75rem', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', fontSize: '.95rem', marginBottom: '.6rem' }}
                                     >
                                         {pct >= 100 ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem' }}><MI name="workspace_premium" style={{ fontSize: '1rem' }} /> Xem chứng chỉ</span> : pct > 0 ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem' }}><MI name="play_arrow" style={{ fontSize: '1rem' }} /> Tiếp tục học</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem' }}><MI name="play_arrow" style={{ fontSize: '1rem' }} /> Bắt đầu học ngay</span>}
@@ -790,7 +815,7 @@ const CourseDetail = () => {
                             <div style={{ fontSize: '.78rem', opacity: .9, marginBottom: '.75rem' }}>Hoàn thành khóa học</div>
                             <div style={{ height: 1, background: 'rgba(255,255,255,.3)', marginBottom: '.75rem' }} />
                             <div style={{ fontSize: '.78rem', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '.3rem' }}>
-                                {['✓ Mã UUID định danh duy nhất', '✓ QR Code xác thực nhanh', '✓ Lưu trữ vĩnh viễn trên hệ thống'].map(t => (
+                                {['✓ Mã UUID định danh duy nhất', '✓ Lưu trữ vĩnh viễn trên hệ thống'].map(t => (
                                     <div key={t}>{t}</div>
                                 ))}
                             </div>

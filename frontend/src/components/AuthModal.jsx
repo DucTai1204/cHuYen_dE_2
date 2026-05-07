@@ -4,9 +4,9 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
 const MI = ({ name, style, onClick, className = '' }) => (
-    <span 
-        className={`material-icons ${className}`} 
-        style={{ fontSize: '1.2rem', verticalAlign: 'middle', ...style }} 
+    <span
+        className={`material-icons ${className}`}
+        style={{ fontSize: '1.2rem', verticalAlign: 'middle', ...style }}
         onClick={onClick}
     >
         {name}
@@ -21,10 +21,10 @@ const AuthModal = () => {
     // Login states
     const [loginData, setLoginData] = useState({ username: '', password: '' });
     const [showPassword, setShowPassword] = useState(false);
-    
+
     // Register states
-    const [registerData, setRegisterData] = useState({ 
-        username: '', password: '', ho_va_ten: '', email: '', vai_tro: 'HocVien' 
+    const [registerData, setRegisterData] = useState({
+        username: '', password: '', ho_va_ten: '', email: '', vai_tro: 'HocVien'
     });
 
     const [error, setError] = useState('');
@@ -88,8 +88,8 @@ const AuthModal = () => {
                     {/* Header */}
                     <div style={{ textAlign: 'center', marginBottom: type === 'login' ? '2rem' : '1.25rem' }}>
                         <div style={{
-                            width: type === 'login' ? 56 : 44, 
-                            height: type === 'login' ? 56 : 44, 
+                            width: type === 'login' ? 56 : 44,
+                            height: type === 'login' ? 56 : 44,
                             background: 'var(--primary)',
                             borderRadius: 'var(--r-lg)', display: 'inline-flex',
                             alignItems: 'center', justifyContent: 'center',
@@ -109,8 +109,8 @@ const AuthModal = () => {
                     </div>
 
                     {error && (
-                        <div className={`alert ${error.includes('thành công') ? 'alert-success' : 'alert-danger'}`} 
-                             style={{ padding: '.75rem 1rem', fontSize: '.85rem', marginBottom: '1.5rem' }}>
+                        <div className={`alert ${error.includes('thành công') ? 'alert-success' : 'alert-danger'}`}
+                            style={{ padding: '.75rem 1rem', fontSize: '.85rem', marginBottom: '1.5rem' }}>
                             <MI name={error.includes('thành công') ? 'check_circle' : 'error_outline'} style={{ fontSize: '1rem' }} />
                             {error}
                         </div>
@@ -120,13 +120,13 @@ const AuthModal = () => {
                         <form onSubmit={handleLoginSubmit}>
                             <div className="form-group" style={{ marginBottom: '1rem' }}>
                                 <label className="form-label" style={{ fontSize: '.75rem' }}>Tên đăng nhập</label>
-                                <input 
-                                    type="text" 
-                                    className="form-input" 
-                                    placeholder="Nhập tên đăng nhập" 
-                                    value={loginData.username} 
-                                    onChange={e => setLoginData({ ...loginData, username: e.target.value })} 
-                                    required 
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    placeholder="Nhập tên đăng nhập"
+                                    value={loginData.username}
+                                    onChange={e => setLoginData({ ...loginData, username: e.target.value })}
+                                    required
                                 />
                             </div>
                             <div className="form-group" style={{ marginBottom: '1.25rem' }}>
@@ -143,16 +143,22 @@ const AuthModal = () => {
                                     />
                                     <MI
                                         name={showPassword ? 'visibility_off' : 'visibility'}
-                                        style={{ 
-                                            position: 'absolute', right: '1rem', 
-                                            color: 'var(--text-muted)', cursor: 'pointer',
-                                            padding: '.25rem'
+                                        style={{
+                                            position: 'absolute',
+                                            right: '1.25rem',
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            color: 'var(--text-muted)',
+                                            cursor: 'pointer',
+                                            zIndex: 2,
+                                            display: 'flex',
+                                            alignItems: 'center'
                                         }}
                                         onClick={() => setShowPassword(!showPassword)}
                                     />
                                 </div>
                             </div>
-                            
+
                             <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '.85rem' }} disabled={loading}>
                                 {loading ? 'Đang xác thực...' : 'Đăng nhập ngay'}
                             </button>
@@ -162,53 +168,53 @@ const AuthModal = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
                                 <div className="form-group" style={{ marginBottom: 0 }}>
                                     <label className="form-label" style={{ fontSize: '.75rem', marginBottom: '.35rem' }}>Tên đăng nhập</label>
-                                    <input 
-                                        type="text" 
-                                        className="form-input" 
-                                        placeholder="username" 
+                                    <input
+                                        type="text"
+                                        className="form-input"
+                                        placeholder="username"
                                         style={{ padding: '.65rem .9rem' }}
-                                        value={registerData.username} 
-                                        onChange={e => setRegisterData({ ...registerData, username: e.target.value })} 
-                                        required 
+                                        value={registerData.username}
+                                        onChange={e => setRegisterData({ ...registerData, username: e.target.value })}
+                                        required
                                     />
                                 </div>
                                 <div className="form-group" style={{ marginBottom: 0 }}>
                                     <label className="form-label" style={{ fontSize: '.75rem', marginBottom: '.35rem' }}>Mật khẩu</label>
-                                    <input 
-                                        type="password" 
-                                        className="form-input" 
-                                        placeholder="••••••••" 
+                                    <input
+                                        type="password"
+                                        className="form-input"
+                                        placeholder="••••••••"
                                         style={{ padding: '.65rem .9rem' }}
-                                        value={registerData.password} 
-                                        onChange={e => setRegisterData({ ...registerData, password: e.target.value })} 
-                                        required 
+                                        value={registerData.password}
+                                        onChange={e => setRegisterData({ ...registerData, password: e.target.value })}
+                                        required
                                     />
                                 </div>
                             </div>
 
                             <div className="form-group" style={{ marginBottom: '0.75rem' }}>
                                 <label className="form-label" style={{ fontSize: '.75rem', marginBottom: '.35rem' }}>Họ và tên</label>
-                                <input 
-                                    type="text" 
-                                    className="form-input" 
-                                    placeholder="Nguyễn Văn A" 
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    placeholder="Nguyễn Văn A"
                                     style={{ padding: '.65rem .9rem' }}
-                                    value={registerData.ho_va_ten} 
-                                    onChange={e => setRegisterData({ ...registerData, ho_va_ten: e.target.value })} 
-                                    required 
+                                    value={registerData.ho_va_ten}
+                                    onChange={e => setRegisterData({ ...registerData, ho_va_ten: e.target.value })}
+                                    required
                                 />
                             </div>
 
                             <div className="form-group" style={{ marginBottom: '0.75rem' }}>
                                 <label className="form-label" style={{ fontSize: '.75rem', marginBottom: '.35rem' }}>Email</label>
-                                <input 
-                                    type="email" 
-                                    className="form-input" 
-                                    placeholder="example@gmail.com" 
+                                <input
+                                    type="email"
+                                    className="form-input"
+                                    placeholder="example@gmail.com"
                                     style={{ padding: '.65rem .9rem' }}
-                                    value={registerData.email} 
-                                    onChange={e => setRegisterData({ ...registerData, email: e.target.value })} 
-                                    required 
+                                    value={registerData.email}
+                                    onChange={e => setRegisterData({ ...registerData, email: e.target.value })}
+                                    required
                                 />
                             </div>
 
@@ -220,7 +226,7 @@ const AuthModal = () => {
                                         { val: 'GiangVien', label: 'Giảng viên', icon: 'person_outline' },
                                         { val: 'NhaTuyenDung', label: 'Tuyển dụng', icon: 'business_center' }
                                     ].map(role => (
-                                        <div 
+                                        <div
                                             key={role.val}
                                             onClick={() => setRegisterData({ ...registerData, vai_tro: role.val })}
                                             style={{
@@ -251,7 +257,7 @@ const AuthModal = () => {
                         {type === 'login' ? (
                             <>
                                 Chưa có tài khoản?{' '}
-                                <span 
+                                <span
                                     style={{ color: 'var(--primary)', fontWeight: 700, cursor: 'pointer' }}
                                     onClick={() => setType('register')}
                                 >
@@ -261,7 +267,7 @@ const AuthModal = () => {
                         ) : (
                             <>
                                 Đã có tài khoản?{' '}
-                                <span 
+                                <span
                                     style={{ color: 'var(--primary)', fontWeight: 700, cursor: 'pointer' }}
                                     onClick={() => setType('login')}
                                 >

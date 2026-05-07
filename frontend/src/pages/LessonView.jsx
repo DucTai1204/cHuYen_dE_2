@@ -8,6 +8,13 @@ import api from '../services/api';
 const TYPE_ICON = { Video: 'play_circle', Quiz: 'assignment_turned_in', TaiLieu: 'description', VanBan: 'article' };
 const TYPE_LABEL = { Video: 'Video', Quiz: 'Bài kiểm tra', TaiLieu: 'Tài liệu', VanBan: 'Văn bản' };
 
+/* ─── Material Icon Component ─── */
+const MI = ({ name, style }) => (
+    <span className="material-icons" style={{ fontSize: '1.2rem', verticalAlign: 'middle', ...style }}>
+        {name}
+    </span>
+);
+
 /* ─── Helpers ─── */
 const buildFlatLessons = (chapters) => {
     const flat = [];
@@ -398,7 +405,8 @@ const QuizViewer = ({ lesson, onComplete }) => {
                 onComplete();
             }
         } catch (err) {
-            alert(err.response?.data?.detail || 'Lỗi khi nộp bài');
+            console.error('[QuizViewer] Submit error:', err);
+            alert(err.response?.data?.detail || 'Lỗi khi nộp bài. Vui lòng thử lại.');
         } finally {
             setSubmitting(false);
         }
@@ -738,8 +746,22 @@ const LessonView = () => {
 
             // Kiểm tra xem đã hoàn thành toàn bộ chưa
             const idx = flatLessons.findIndex(l => l.id_bai_giang === currentLesson.id_bai_giang);
-            if (idx === flatLessons.length - 1 || updatedEnroll?.phan_tram_hoan_thanh >= 100) {
-                showToast('🏆 Bạn đã hoàn thành toàn bộ khóa học!');
+            const isLastLesson = idx === flatLessons.length - 1;
+
+            if (isLastLesson || updatedEnroll?.phan_tram_hoan_thanh >= 100) {
+                showToast('🏆 Chúc mừng! Bạn đã hoàn thành toàn bộ khóa học.');
+                
+                // Đợi thêm một chút để backend kịp tạo certificate (nếu chưa có)
+                if (!updatedEnroll?.chung_chi?.length) {
+                    setTimeout(async () => {
+                        const refreshRes = await api.get('/lms/dang-ky-hoc/');
+                        const latestEnroll = (refreshRes.data || []).find(e => {
+                            const eid = e.khoa_hoc?.id_khoa_hoc ?? e.id_khoa_hoc;
+                            return String(eid) === String(courseId);
+                        });
+                        if (latestEnroll) setEnrollment(latestEnroll);
+                    }, 2000);
+                }
             }
 
         } catch (err) {
